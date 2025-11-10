@@ -1,59 +1,31 @@
 import { DataTable } from "@/components/data-table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function CostAnalysis() {
-  const products = [
-    {
-      id: "P001",
-      name: "Croissant",
-      ingredientCost: 0.70,
-      laborCost: 0.50,
-      overheadCost: 0.30,
-      totalCost: 1.50,
-      sellingPrice: 3.50,
-      margin: 57.1,
-    },
-    {
-      id: "P002",
-      name: "Danish Pastry",
-      ingredientCost: 0.85,
-      laborCost: 0.60,
-      overheadCost: 0.35,
-      totalCost: 1.80,
-      sellingPrice: 4.00,
-      margin: 55.0,
-    },
-    {
-      id: "P003",
-      name: "Sourdough Bread",
-      ingredientCost: 1.00,
-      laborCost: 1.00,
-      overheadCost: 0.50,
-      totalCost: 2.50,
-      sellingPrice: 6.00,
-      margin: 58.3,
-    },
-    {
-      id: "P004",
-      name: "Baguette",
-      ingredientCost: 0.55,
-      laborCost: 0.40,
-      overheadCost: 0.25,
-      totalCost: 1.20,
-      sellingPrice: 2.50,
-      margin: 52.0,
-    },
-  ];
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  const productData = products.map((p: any) => {
+    const totalCost = p.unitCost + p.laborCost + p.overheadCost;
+    const margin = ((p.sellingPrice - totalCost) / p.sellingPrice) * 100;
+    return {
+      ...p,
+      totalCost,
+      margin,
+    };
+  });
 
   const columns = [
-    { key: "id", label: "ID", sortable: true },
+    { key: "code", label: "Code", sortable: true },
     { key: "name", label: "Product", sortable: true },
     {
-      key: "ingredientCost",
-      label: "Ingredients",
+      key: "unitCost",
+      label: "Unit Cost",
       sortable: true,
-      render: (item: any) => `$${item.ingredientCost.toFixed(2)}`,
+      render: (item: any) => `$${item.unitCost.toFixed(2)}`,
     },
     {
       key: "laborCost",
@@ -101,7 +73,13 @@ export default function CostAnalysis() {
     },
   ];
 
-  const avgMargin = products.reduce((acc, p) => acc + p.margin, 0) / products.length;
+  const avgMargin = productData.length > 0 
+    ? productData.reduce((acc: number, p: any) => acc + p.margin, 0) / productData.length 
+    : 0;
+  
+  const highestMargin = productData.length > 0
+    ? productData.reduce((prev: any, current: any) => prev.margin > current.margin ? prev : current, productData[0])
+    : null;
 
   return (
     <div className="space-y-6">
@@ -127,8 +105,10 @@ export default function CostAnalysis() {
             <CardTitle className="text-sm font-medium">Highest Margin</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Sourdough Bread</div>
-            <p className="text-xs text-muted-foreground mt-1">58.3% profit margin</p>
+            <div className="text-2xl font-bold">{highestMargin?.name || "N/A"}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {highestMargin ? `${highestMargin.margin.toFixed(1)}% profit margin` : "No data"}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -136,14 +116,14 @@ export default function CostAnalysis() {
             <CardTitle className="text-sm font-medium">Total Products</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{products.length}</div>
+            <div className="text-2xl font-bold">{productData.length}</div>
             <p className="text-xs text-muted-foreground mt-1">In cost analysis</p>
           </CardContent>
         </Card>
       </div>
 
       <DataTable
-        data={products}
+        data={productData}
         columns={columns}
         searchPlaceholder="Search products..."
         onSearch={(query) => console.log("Search:", query)}

@@ -1,12 +1,26 @@
+import { useState } from "react";
 import { LoginForm } from "@/components/login-form";
-import { useLocation } from "wouter";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [, setLocation] = useLocation();
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (username: string, password: string) => {
-    console.log("Login:", username, password);
-    setLocation("/");
+  const handleLogin = async (username: string, password: string) => {
+    setIsLoading(true);
+    try {
+      await login(username, password);
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return <LoginForm onLogin={handleLogin} />;

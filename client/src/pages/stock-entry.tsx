@@ -1,19 +1,35 @@
 import { StockEntryForm } from "@/components/stock-entry-form";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StockEntry() {
-  const stores = [
-    { id: "1", name: "Store 1 (Main)" },
-    { id: "2", name: "Store 2 (Daily Delivery)" },
-    { id: "3", name: "Store 3 (Every 2 Days)" },
-  ];
+  const { toast } = useToast();
 
-  const products = [
-    { id: "P001", name: "Croissant" },
-    { id: "P002", name: "Danish Pastry" },
-    { id: "P003", name: "Sourdough Bread" },
-    { id: "P004", name: "Baguette" },
-    { id: "P005", name: "Muffin" },
-  ];
+  const { data: stores = [] } = useQuery({
+    queryKey: ["/api/stores"],
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (entry: any) => apiRequest("/api/stock-entries", "POST", entry),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/discrepancies"] });
+      toast({ title: "Stock entry recorded successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to record stock entry",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -28,9 +44,7 @@ export default function StockEntry() {
         <StockEntryForm
           stores={stores}
           products={products}
-          onSubmit={(entry) => {
-            console.log("Stock entry submitted:", entry);
-          }}
+          onSubmit={(entry) => createMutation.mutate(entry)}
         />
       </div>
     </div>

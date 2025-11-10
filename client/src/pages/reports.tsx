@@ -13,50 +13,47 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Reports() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedStore, setSelectedStore] = useState("all");
 
-  const stockData = [
-    {
-      id: "1",
-      date: "2024-01-15",
-      store: "Store 1",
-      product: "Croissant",
-      delivered: 50,
-      sales: 42,
-      waste: 1,
-      expected: 47,
-      reported: 45,
-      discrepancy: 4.0,
-    },
-    {
-      id: "2",
-      date: "2024-01-15",
-      store: "Store 2",
-      product: "Baguette",
-      delivered: 60,
-      sales: 50,
-      waste: 2,
-      expected: 58,
-      reported: 53,
-      discrepancy: 8.3,
-    },
-    {
-      id: "3",
-      date: "2024-01-14",
-      store: "Store 1",
-      product: "Danish Pastry",
-      delivered: 40,
-      sales: 35,
-      waste: 1,
-      expected: 39,
-      reported: 38,
-      discrepancy: 2.5,
-    },
-  ];
+  const { data: stores = [] } = useQuery({
+    queryKey: ["/api/stores"],
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  const { data: allStockEntries = [] } = useQuery({
+    queryKey: ["/api/stock-entries"],
+  });
+
+  const storeMap = new Map(stores.map((s: any) => [s.id, s.name]));
+  const productMap = new Map(products.map((p: any) => [p.id, p.name]));
+
+  const stockData = allStockEntries
+    .filter((entry: any) => {
+      if (selectedStore !== "all" && entry.storeId !== selectedStore) return false;
+      if (dateFrom && entry.date < dateFrom) return false;
+      if (dateTo && entry.date > dateTo) return false;
+      return true;
+    })
+    .map((entry: any) => ({
+      id: entry.id,
+      date: entry.date,
+      store: storeMap.get(entry.storeId) || "Unknown",
+      product: productMap.get(entry.productId) || "Unknown",
+      delivered: entry.delivered,
+      sales: entry.sales,
+      waste: entry.waste,
+      expected: entry.expectedRemaining,
+      reported: entry.reportedRemaining,
+      discrepancy: entry.discrepancy,
+    }));
 
   const columns = [
     { key: "date", label: "Date", sortable: true },
@@ -132,9 +129,11 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Stores</SelectItem>
-                  <SelectItem value="1">Store 1 (Main)</SelectItem>
-                  <SelectItem value="2">Store 2 (Daily Delivery)</SelectItem>
-                  <SelectItem value="3">Store 3 (Every 2 Days)</SelectItem>
+                  {stores.map((store: any) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

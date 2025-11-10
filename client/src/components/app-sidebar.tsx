@@ -1,4 +1,4 @@
-import { Home, Package, ClipboardList, DollarSign, FileText, Settings, LogOut, Wheat, Users } from "lucide-react";
+import { Home, Package, ClipboardList, DollarSign, FileText, Settings, LogOut, Wheat, Users, CookingPot } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -27,7 +27,7 @@ const menuItems: MenuItem[] = [
   { title: "Products", url: "/products", icon: Package, roles: ["Admin", "Manager"] },
   { title: "Stock Entry", url: "/stock-entry", icon: ClipboardList, roles: ["Admin", "Manager", "Staff"] },
   { title: "Ingredients", url: "/ingredients", icon: Wheat, roles: ["Admin", "Manager"] },
-  { title: "Recipes", url: "/recipes", icon: FileText, roles: ["Admin", "Manager"] },
+  { title: "Recipes", url: "/recipes", icon: CookingPot, roles: ["Admin", "Manager"] },
   { title: "Reports", url: "/reports", icon: FileText, roles: ["Admin", "Manager"] },
   { title: "Cost Analysis", url: "/cost-analysis", icon: DollarSign, roles: ["Admin", "Manager"] },
   { title: "Users", url: "/users", icon: Users, roles: ["Admin"] },

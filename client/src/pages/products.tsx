@@ -1,20 +1,82 @@
+import { useState } from "react";
 import { DataTable } from "@/components/data-table";
 import { ProductForm } from "@/components/product-form";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash, Package } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Products() {
-  const products = [
-    { id: "P001", name: "Croissant", unitCost: 1.50, sellingPrice: 3.50, stock: 5, minStock: 10, minStockLevel: 10, laborCost: 0.50, overheadCost: 0.30 },
-    { id: "P002", name: "Danish Pastry", unitCost: 1.80, sellingPrice: 4.00, stock: 8, minStock: 8, minStockLevel: 8, laborCost: 0.60, overheadCost: 0.35 },
-    { id: "P003", name: "Sourdough Bread", unitCost: 2.50, sellingPrice: 6.00, stock: 20, minStock: 15, minStockLevel: 15, laborCost: 1.00, overheadCost: 0.50 },
-    { id: "P004", name: "Baguette", unitCost: 1.20, sellingPrice: 2.50, stock: 25, minStock: 20, minStockLevel: 20, laborCost: 0.40, overheadCost: 0.25 },
-    { id: "P005", name: "Muffin", unitCost: 0.80, sellingPrice: 2.00, stock: 30, minStock: 25, minStockLevel: 25, laborCost: 0.30, overheadCost: 0.20 },
-  ];
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["/api/products"],
+  });
+
+  const { data: lowStockProducts = [] } = useQuery({
+    queryKey: ["/api/analytics/low-stock"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (product: any) => apiRequest("/api/products", "POST", product),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
+      toast({ title: "Product created successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create product",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, product }: { id: string; product: any }) =>
+      apiRequest(`/api/products/${id}`, "PATCH", product),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
+      toast({ title: "Product updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update product",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/products/${id}`, "DELETE"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
+      toast({ title: "Product deleted successfully" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete product",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const lowStockIds = new Set(lowStockProducts.map((p: any) => p.id));
+  const filteredProducts = products.filter((p: any) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const columns = [
-    { key: "id", label: "ID", sortable: true },
+    { key: "code", label: "Code", sortable: true },
     { key: "name", label: "Product Name", sortable: true },
     {
       key: "unitCost",
@@ -29,13 +91,13 @@ export default function Products() {
       render: (item: any) => `$${item.sellingPrice.toFixed(2)}`,
     },
     {
-      key: "stock",
-      label: "Current Stock",
+      key: "minStockLevel",
+      label: "Min Stock",
       sortable: true,
       render: (item: any) => (
         <div className="flex items-center gap-2">
-          <span>{item.stock}</span>
-          {item.stock < item.minStock && (
+          <span>{item.minStockLevel}</span>
+          {lowStockIds.has(item.id) && (
             <Badge variant="destructive" className="text-xs">Low</Badge>
           )}
         </div>
@@ -62,29 +124,36 @@ export default function Products() {
           </p>
         </div>
         <ProductForm
-          onSubmit={(product) => {
-            console.log("Product added:", product);
-          }}
+          onSubmit={(product) => createMutation.mutate(product)}
         />
       </div>
 
       <DataTable
-        data={products}
+        data={filteredProducts}
         columns={columns}
         searchPlaceholder="Search products..."
-        onSearch={(query) => console.log("Search:", query)}
+        onSearch={setSearchQuery}
         actions={(item) => (
           <div className="flex gap-2">
             <ProductForm
               product={item}
-              onSubmit={(product) => console.log("Product updated:", product)}
+              onSubmit={(product) => updateMutation.mutate({ id: item.id, product })}
               trigger={
                 <Button size="sm" variant="ghost" data-testid={`button-edit-${item.id}`}>
                   <Edit className="w-4 h-4" />
                 </Button>
               }
             />
-            <Button size="sm" variant="ghost" data-testid={`button-delete-${item.id}`}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (confirm("Are you sure you want to delete this product?")) {
+                  deleteMutation.mutate(item.id);
+                }
+              }}
+              data-testid={`button-delete-${item.id}`}
+            >
               <Trash className="w-4 h-4" />
             </Button>
           </div>

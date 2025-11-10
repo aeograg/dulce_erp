@@ -1,18 +1,44 @@
 import { DashboardCard } from "@/components/dashboard-card";
 import { AlertCard } from "@/components/alert-card";
-import { Package, AlertTriangle, TrendingUp, DollarSign, ShoppingCart, Users } from "lucide-react";
+import { Package, AlertTriangle, TrendingUp, ShoppingCart } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
 
 export default function Dashboard() {
-  const lowStockItems = [
-    { id: "1", name: "Croissant", details: "Current: 5 units, Min: 10 units" },
-    { id: "2", name: "Danish Pastry", details: "Current: 3 units, Min: 8 units" },
-    { id: "3", name: "Sourdough Bread", details: "Current: 2 units, Min: 6 units" },
-  ];
+  const { user } = useAuth();
+  
+  const { data: products = [] } = useQuery({
+    queryKey: ["/api/products"],
+  });
 
-  const discrepancies = [
-    { id: "1", name: "Store 1 - Baguette", details: "Discrepancy: 8% (Expected: 25, Reported: 23)" },
-    { id: "2", name: "Store 2 - Muffins", details: "Discrepancy: 6% (Expected: 40, Reported: 38)" },
-  ];
+  const { data: lowStockProducts = [] } = useQuery({
+    queryKey: ["/api/analytics/low-stock"],
+    enabled: user?.role === "Admin" || user?.role === "Manager",
+  });
+
+  const { data: discrepanciesData = [] } = useQuery({
+    queryKey: ["/api/analytics/discrepancies"],
+    enabled: user?.role === "Admin" || user?.role === "Manager",
+  });
+
+  const lowStockItems = lowStockProducts.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    details: `Current: ${item.currentStock} units, Min: ${item.minStockLevel} units`,
+  }));
+
+  const discrepancies = discrepanciesData.slice(0, 5).map((item: any) => ({
+    id: item.id,
+    name: `${item.storeName} - ${item.productName}`,
+    details: `Discrepancy: ${Math.abs(item.discrepancy).toFixed(1)}% (Expected: ${item.expectedRemaining}, Reported: ${item.reportedRemaining})`,
+  }));
+
+  const avgMargin = products.length > 0
+    ? products.reduce((acc: number, p: any) => {
+        const margin = ((p.sellingPrice - p.unitCost) / p.sellingPrice) * 100;
+        return acc + margin;
+      }, 0) / products.length
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -23,30 +49,24 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <DashboardCard
           title="Total Products"
-          value="24"
+          value={products.length}
           icon={Package}
           description="Active inventory items"
         />
         <DashboardCard
           title="Low Stock Alerts"
-          value="3"
+          value={lowStockProducts.length}
           icon={AlertTriangle}
           description="Items below minimum level"
         />
         <DashboardCard
           title="Avg Profit Margin"
-          value="42%"
+          value={`${avgMargin.toFixed(1)}%`}
           icon={TrendingUp}
-          trend="+2% from last week"
-        />
-        <DashboardCard
-          title="Daily Sales"
-          value="$1,247"
-          icon={ShoppingCart}
-          trend="Across all stores"
+          description="Across all products"
         />
       </div>
 
