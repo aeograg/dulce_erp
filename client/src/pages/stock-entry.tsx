@@ -15,7 +15,7 @@ export default function StockEntry() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (entry: any) => apiRequest("/api/stock-entries", "POST", entry),
+    mutationFn: (entry: any) => apiRequest("POST", "/api/stock-entries", entry),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });

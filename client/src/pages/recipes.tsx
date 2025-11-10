@@ -37,7 +37,7 @@ export default function Recipes() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (recipe: any) => apiRequest("/api/recipes", "POST", recipe),
+    mutationFn: (recipe: any) => apiRequest("POST", "/api/recipes", recipe),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/products/${selectedProductId}/recipes`] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
@@ -54,7 +54,7 @@ export default function Recipes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/recipes/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/recipes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/products/${selectedProductId}/recipes`] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });

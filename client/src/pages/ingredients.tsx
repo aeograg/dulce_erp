@@ -32,7 +32,7 @@ export default function Ingredients() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (ingredient: any) => apiRequest("/api/ingredients", "POST", ingredient),
+    mutationFn: (ingredient: any) => apiRequest("POST", "/api/ingredients", ingredient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
       toast({ title: "Ingredient created successfully" });
@@ -50,7 +50,7 @@ export default function Ingredients() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ingredient }: { id: string; ingredient: any }) =>
-      apiRequest(`/api/ingredients/${id}`, "PATCH", ingredient),
+      apiRequest("PATCH", `/api/ingredients/${id}`, ingredient),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
       toast({ title: "Ingredient updated successfully" });
@@ -67,7 +67,7 @@ export default function Ingredients() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest(`/api/ingredients/${id}`, "DELETE"),
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/ingredients/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/ingredients"] });
       toast({ title: "Ingredient deleted successfully" });
