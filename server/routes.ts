@@ -7,6 +7,61 @@ import { db } from "../db";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // User Management Routes (Admin only)
+  app.get("/api/users", requireRole("Admin"), async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const usersWithoutPasswords = allUsers.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", requireRole("Admin"), async (req, res) => {
+    try {
+      const { username, password, role, storeId } = req.body;
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        username,
+        password: hashedPassword,
+        role,
+        storeId: storeId || null,
+      });
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/users/:id", requireRole("Admin"), async (req, res) => {
+    try {
+      const { password, ...otherData } = req.body;
+      const updateData: any = otherData;
+      if (password) {
+        updateData.password = await hashPassword(password);
+      }
+      const user = await storage.updateUser(req.params.id, updateData);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireRole("Admin"), async (req, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   // Auth Routes
   app.post("/api/auth/login", async (req, res) => {
     try {

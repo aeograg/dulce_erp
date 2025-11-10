@@ -16,6 +16,7 @@ import Recipes from "@/pages/recipes";
 import StockEntry from "@/pages/stock-entry";
 import Reports from "@/pages/reports";
 import CostAnalysis from "@/pages/cost-analysis";
+import Users from "@/pages/users";
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -73,6 +74,11 @@ function AuthenticatedApp() {
               <Route path="/cost-analysis">
                 <RequireAuth roles={["Admin", "Manager"]}>
                   <CostAnalysis />
+                </RequireAuth>
+              </Route>
+              <Route path="/users">
+                <RequireAuth roles={["Admin"]}>
+                  <Users />
                 </RequireAuth>
               </Route>
               <Route component={NotFound} />
