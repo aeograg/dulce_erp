@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive bakery ERP web application for managing inventory, multi-store stock tracking, cost calculation, and recipe management with role-based access control. Built with modern web technologies, the system serves three user roles (Admin, Manager, Staff) with different permission levels to handle daily bakery operations including product management, stock entries, discrepancy tracking, and profitability analysis.
+A comprehensive bakery ERP web application for managing inventory, multi-store stock tracking, cost calculation, recipe management, and delivery forecasting with role-based access control. Built with modern web technologies, the system serves three user roles (Admin, Manager, Staff) with different permission levels. Features a two-stage stock entry workflow where Staff inputs end-of-day data (current stock, waste) for their assigned store, then Admin/Manager later adds delivered quantities and sales figures. Includes automatic cost calculation from ingredient-only recipes, stock discrepancy detection (>5% threshold), waste tracking, and AI-powered delivery planning based on historical sales data.
 
 ## User Preferences
 
@@ -60,10 +60,12 @@ Preferred communication style: Simple, everyday language.
 
 **Business Logic Layers**
 - Storage abstraction layer (IStorage interface) separating data access from routes
-- Automatic cost calculation based on recipe ingredients, labor, and overhead
+- Automatic cost calculation based on recipe ingredients only (labor/overhead costs removed)
 - Stock discrepancy detection (alerts when >5% variance from expected)
 - Waste tracking with 3% cap validation
-- Delivery planning based on minimum stock levels and historical sales data
+- Two-stage stock entry workflow: Staff enters current_stock/waste, Admin/Manager adds delivered/sales
+- Delivery forecasting engine analyzing historical sales patterns and store-specific delivery schedules
+- Role-based store assignment (Staff restricted to their assigned store)
 
 ### Data Storage
 
@@ -73,12 +75,15 @@ Preferred communication style: Simple, everyday language.
 - WebSocket connection for serverless database access
 
 **Schema Design**
-- **Users**: Authentication and role management (Admin, Manager, Staff)
-- **Stores**: Multi-location support with delivery schedules (daily, every-2-days)
-- **Products**: Core inventory items with pricing, costs, and minimum stock levels
-- **Ingredients**: Recipe components with cost per unit
-- **Recipes**: Many-to-many relationship between products and ingredients with quantities
-- **StockEntries**: Daily stock tracking with delivered, current stock, waste, sales, and discrepancy fields
+- **Users**: Authentication, role management (Admin, Manager, Staff), and optional store assignment
+- **Stores**: Multi-location support with delivery schedules (daily, every-2-days, every-3-days)
+- **Products**: Core inventory items with unit cost (auto-calculated from recipes), selling price, and minimum stock levels
+- **Ingredients**: Recipe components with cost per unit and measurement unit
+- **Recipes**: Many-to-many relationship between products and ingredients with quantities for cost calculation
+- **StockEntries**: Daily stock tracking with:
+  - Staff-entered: currentStock, waste (end-of-day counts)
+  - Admin/Manager-entered: delivered, sales (completed later)
+  - Auto-calculated: expectedRemaining, discrepancy percentage
 
 **Data Validation**
 - Zod schemas for runtime type validation
@@ -126,6 +131,23 @@ Preferred communication style: Simple, everyday language.
 - nanoid - Unique ID generation
 - clsx - Conditional className utility
 
-**Future Integration Placeholder**
-- Square API for sales data import (environment variable SQUARE_API_KEY configured but not yet implemented)
-- Manual sales entry form serves as fallback until API integration is complete
+## Feature Implementation Status
+
+**Completed Features**
+- ✅ Simplified product costing model (ingredient costs only, auto-calculated from recipes)
+- ✅ User management with store assignments (Admin-only CRUD operations)
+- ✅ Two-stage stock entry workflow (Staff → Admin/Manager)
+- ✅ Stock update interface for completing pending entries
+- ✅ Delivery forecasting based on historical sales patterns
+- ✅ Role-based access control with store restrictions for Staff
+- ✅ Automatic discrepancy detection and flagging (>5% threshold)
+- ✅ Recipe-based cost calculation with real-time updates
+- ✅ Multi-store inventory tracking
+- ✅ Dashboard with alerts for low stock and discrepancies
+
+**Future Enhancement Opportunities**
+- Square API integration for automated sales data import
+- Advanced reporting with custom date ranges and export functionality
+- Email notifications for critical alerts (low stock, high discrepancies)
+- Mobile-optimized interface for field staff
+- Batch stock entry for multiple products at once
