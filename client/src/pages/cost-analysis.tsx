@@ -9,7 +9,7 @@ export default function CostAnalysis() {
   });
 
   const productData = products.map((p: any) => {
-    const totalCost = p.unitCost + p.laborCost + p.overheadCost;
+    const totalCost = p.unitCost;
     const margin = ((p.sellingPrice - totalCost) / p.sellingPrice) * 100;
     return {
       ...p,
@@ -26,24 +26,6 @@ export default function CostAnalysis() {
       label: "Unit Cost",
       sortable: true,
       render: (item: any) => `$${item.unitCost.toFixed(2)}`,
-    },
-    {
-      key: "laborCost",
-      label: "Labor",
-      sortable: true,
-      render: (item: any) => `$${item.laborCost.toFixed(2)}`,
-    },
-    {
-      key: "overheadCost",
-      label: "Overhead",
-      sortable: true,
-      render: (item: any) => `$${item.overheadCost.toFixed(2)}`,
-    },
-    {
-      key: "totalCost",
-      label: "Total Cost",
-      sortable: true,
-      render: (item: any) => `$${item.totalCost.toFixed(2)}`,
     },
     {
       key: "sellingPrice",

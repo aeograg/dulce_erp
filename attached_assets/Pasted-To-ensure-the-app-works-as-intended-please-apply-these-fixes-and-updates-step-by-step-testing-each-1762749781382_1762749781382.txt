@@ -1,0 +1,30 @@
+To ensure the app works as intended, please apply these fixes and updates step by step, testing each change. Focus on simplicity, bug fixes, and the specified workflow. Provide updated code snippets for affected parts and confirm functionality after implementation.
+
+Product Management Fixes and Simplifications:
+The "Add Product" button on the products page is not working—users cannot add new products. Debug and fix the form submission: Ensure the POST request handles input correctly, validates fields, inserts into the database, and redirects with a success message (e.g., using flash). Handle any errors gracefully.
+Simplify the Product model: For now, only include unit_cost and selling_price fields (along with id, name, min_stock_level). Delete any labor_cost and overhead_cost fields from the model, database, forms, and views. Update all related routes and templates accordingly.
+
+User Management Fixes and Enhancements:
+The users section is not functioning properly. As an Admin, I need a working page to add new users with a form that includes: username, password, role (dropdown: Admin, Manager, Staff), and assigned store (dropdown from Store model, optional for Admin/Manager).
+Ensure added users are restricted: Staff users can only view/input stock for their assigned store (pulled from User.store_id).
+Add a list view for Admin to see, edit, or delete users.
+
+Stock Entry Module Revisions:
+For stock entries, Staff users should only input data for their own assigned store—automatically set the store_id from the logged-in user's store_id; remove any store selection dropdown from the form.
+Limit the Staff input form to: date (default to today), product (dropdown from Product model), current_stock (integer), and waste (integer, validate to max 3% of expected/delivered via form logic).
+On submit, set reported_remaining = current_stock. Do not allow Staff to input sales or delivered—these will be handled separately by Admin/Manager.
+Workflow: At end of day, Staff inputs current_stock and waste. Admin/Manager later inputs delivered (e.g., from production logs) and sales (manual or via Square) on a separate update page for existing entries.
+After updates, auto-calculate: Fetch previous day's expected_remaining for the same product/store; expected_remaining = previous_expected + delivered - sales - waste; discrepancy = reported_remaining - expected_remaining.
+If |discrepancy| > 5% of delivered, flag it as a potential issue (e.g., for shady activity or errors). Use this to auto-calculate next delivery needs in the Delivery Module.
+
+Admin Dashboard and Reporting:
+Create a dashboard page for Admin/Manager: Show a table per store/day with columns for product, sold (sales), waste, current_stock (reported by staff), expected_remaining, and discrepancy. Include filters by date/store and highlights for flagged issues.
+This allows daily checks of sales, waste, stock, and mismatches.
+
+Delivery Module Enhancements:
+Add a dedicated route/page for Admin/Manager to generate and confirm delivery plans (select store and target date).
+Calculation logic: For each product, forecast sales for the next delivery period (rough average from historical sales in StockEntry, e.g., avg daily sales * delivery_days).
+Delivery periods by store: e.g., Store2 = 1 day (daily), Southbank (Store3) = 4 days.
+Needed amount to send = max(0, (forecasted_sales + min_stock_level - current_stock)).
+Example: If forecasted 400 croissants over next 4 days, current_stock = 100, send 300 (adjust for min_stock_level if needed).
+Output a table of products and needed quantities; include a confirm button to save as 'delivered' in a new or updated StockEntry for the next day.

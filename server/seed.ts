@@ -45,8 +45,6 @@ async function seed() {
       unitCost: 1.50,
       sellingPrice: 3.50,
       minStockLevel: 10,
-      laborCost: 0.50,
-      overheadCost: 0.30,
     },
     {
       code: "P002",
@@ -54,8 +52,6 @@ async function seed() {
       unitCost: 1.80,
       sellingPrice: 4.00,
       minStockLevel: 8,
-      laborCost: 0.60,
-      overheadCost: 0.35,
     },
     {
       code: "P003",
@@ -63,8 +59,6 @@ async function seed() {
       unitCost: 2.50,
       sellingPrice: 6.00,
       minStockLevel: 15,
-      laborCost: 1.00,
-      overheadCost: 0.50,
     },
     {
       code: "P004",
@@ -72,8 +66,6 @@ async function seed() {
       unitCost: 1.20,
       sellingPrice: 2.50,
       minStockLevel: 20,
-      laborCost: 0.40,
-      overheadCost: 0.25,
     },
     {
       code: "P005",
@@ -81,8 +73,6 @@ async function seed() {
       unitCost: 0.80,
       sellingPrice: 2.00,
       minStockLevel: 25,
-      laborCost: 0.30,
-      overheadCost: 0.20,
     },
   ]).onConflictDoNothing();
 

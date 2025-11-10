@@ -211,21 +211,17 @@ export default function Recipes() {
                     </div>
                     {selectedProduct && (
                       <div className="mt-2 pt-2 border-t text-sm space-y-1">
-                        <div className="flex justify-between">
-                          <span>Labor Cost:</span>
-                          <span>${selectedProduct.laborCost.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Overhead Cost:</span>
-                          <span>${selectedProduct.overheadCost.toFixed(2)}</span>
-                        </div>
                         <div className="flex justify-between font-semibold">
-                          <span>Total Unit Cost:</span>
-                          <span>${(totalIngredientCost + selectedProduct.laborCost + selectedProduct.overheadCost).toFixed(2)}</span>
+                          <span>Unit Cost (from recipe):</span>
+                          <span>${totalIngredientCost.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-muted-foreground">
                           <span>Selling Price:</span>
                           <span>${selectedProduct.sellingPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
+                          <span>Profit per unit:</span>
+                          <span>${(selectedProduct.sellingPrice - totalIngredientCost).toFixed(2)}</span>
                         </div>
                       </div>
                     )}

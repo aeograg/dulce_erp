@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(),
+  storeId: varchar("store_id").references(() => stores.id),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
@@ -42,8 +43,6 @@ export const products = pgTable("products", {
   unitCost: real("unit_cost").notNull().default(0),
   sellingPrice: real("selling_price").notNull(),
   minStockLevel: integer("min_stock_level").notNull(),
-  laborCost: real("labor_cost").notNull().default(0),
-  overheadCost: real("overhead_cost").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
