@@ -337,6 +337,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/stock-entries/:id", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const { delivered, sales } = req.body;
+      const entry = await storage.updateStockEntry(req.params.id, { delivered, sales });
+      
+      if (!entry) {
+        return res.status(404).json({ error: "Stock entry not found" });
+      }
+      
+      // Recalculate expected remaining and discrepancy
+      const previousExpected = 0; // You may want to get the actual previous stock
+      const expectedRemaining = previousExpected + (entry.delivered || 0) - (entry.waste || 0) - (entry.sales || 0);
+      const discrepancy = (entry.delivered || 0) > 0 
+        ? ((entry.currentStock - expectedRemaining) / (entry.delivered || 1)) * 100 
+        : 0;
+      
+      const updatedEntry = await storage.updateStockEntry(req.params.id, {
+        expectedRemaining,
+        discrepancy,
+      });
+      
+      res.json(updatedEntry);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update stock entry" });
+    }
+  });
+
   // Analytics Routes
   app.get("/api/analytics/low-stock", requireRole("Admin", "Manager"), async (req, res) => {
     try {

@@ -2,15 +2,17 @@ import { StockEntryForm } from "@/components/stock-entry-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 export default function StockEntry() {
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const { data: stores = [] } = useQuery({
+  const { data: stores = [] } = useQuery<any[]>({
     queryKey: ["/api/stores"],
   });
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [] } = useQuery<any[]>({
     queryKey: ["/api/products"],
   });
 
@@ -31,20 +33,27 @@ export default function StockEntry() {
     },
   });
 
+  const filteredStores = user?.role === "Staff" && user.storeId 
+    ? stores.filter((s: any) => s.id === user.storeId)
+    : stores;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Stock Entry</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Record daily stock levels and track discrepancies
+          {user?.role === "Staff" 
+            ? "Record end-of-day stock levels and waste for your store"
+            : "Record daily stock levels and track discrepancies"}
         </p>
       </div>
 
       <div className="max-w-2xl">
         <StockEntryForm
-          stores={stores}
+          stores={filteredStores}
           products={products}
           onSubmit={(entry) => createMutation.mutate(entry)}
+          userRole={user?.role || "Staff"}
         />
       </div>
     </div>

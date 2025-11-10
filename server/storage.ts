@@ -65,6 +65,7 @@ export interface IStorage {
   getStockEntriesByProduct(productId: string): Promise<StockEntry[]>;
   getLatestStockEntry(productId: string, storeId: string): Promise<StockEntry | undefined>;
   createStockEntry(entry: InsertStockEntry): Promise<StockEntry>;
+  updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined>;
   
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
@@ -245,6 +246,11 @@ export class DatabaseStorage implements IStorage {
 
   async createStockEntry(entry: InsertStockEntry): Promise<StockEntry> {
     const result = await db.insert(stockEntries).values(entry).returning();
+    return result[0];
+  }
+
+  async updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined> {
+    const result = await db.update(stockEntries).set(entry).where(eq(stockEntries.id, id)).returning();
     return result[0];
   }
 

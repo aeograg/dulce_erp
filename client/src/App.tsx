@@ -14,6 +14,7 @@ import Products from "@/pages/products";
 import Ingredients from "@/pages/ingredients";
 import Recipes from "@/pages/recipes";
 import StockEntry from "@/pages/stock-entry";
+import StockUpdate from "@/pages/stock-update";
 import Reports from "@/pages/reports";
 import CostAnalysis from "@/pages/cost-analysis";
 import Users from "@/pages/users";
@@ -64,6 +65,11 @@ function AuthenticatedApp() {
               <Route path="/stock-entry">
                 <RequireAuth>
                   <StockEntry />
+                </RequireAuth>
+              </Route>
+              <Route path="/stock-update">
+                <RequireAuth roles={["Admin", "Manager"]}>
+                  <StockUpdate />
                 </RequireAuth>
               </Route>
               <Route path="/reports">

@@ -27,9 +27,10 @@ interface StockEntryFormProps {
   stores: Array<{ id: string; name: string }>;
   products: Array<{ id: string; name: string }>;
   onSubmit: (entry: StockEntry) => void;
+  userRole: string;
 }
 
-export function StockEntryForm({ stores, products, onSubmit }: StockEntryFormProps) {
+export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEntryFormProps) {
   const [formData, setFormData] = useState<Partial<StockEntry>>({
     date: new Date().toISOString().split("T")[0],
     delivered: 0,
@@ -68,11 +69,17 @@ export function StockEntryForm({ stores, products, onSubmit }: StockEntryFormPro
 
   const wastePercent = formData.delivered ? ((formData.waste || 0) / formData.delivered) * 100 : 0;
 
+  const isStaff = userRole === "Staff";
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Daily Stock Entry</CardTitle>
-        <CardDescription>Record daily stock levels for your stores</CardDescription>
+        <CardDescription>
+          {isStaff 
+            ? "Record end-of-day current stock and waste quantities" 
+            : "Record daily stock levels for your stores"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,22 +137,39 @@ export function StockEntryForm({ stores, products, onSubmit }: StockEntryFormPro
             </Select>
           </div>
 
+          {!isStaff && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="delivered">Delivered Quantity</Label>
+                <Input
+                  id="delivered"
+                  type="number"
+                  min="0"
+                  value={formData.delivered}
+                  onChange={(e) => handleChange("delivered", Number(e.target.value))}
+                  required
+                  data-testid="input-delivered"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sales">Sales Quantity</Label>
+                <Input
+                  id="sales"
+                  type="number"
+                  min="0"
+                  value={formData.sales}
+                  onChange={(e) => handleChange("sales", Number(e.target.value))}
+                  required
+                  data-testid="input-sales"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="delivered">Delivered Quantity</Label>
-              <Input
-                id="delivered"
-                type="number"
-                min="0"
-                value={formData.delivered}
-                onChange={(e) => handleChange("delivered", Number(e.target.value))}
-                required
-                data-testid="input-delivered"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="currentStock">Current Stock</Label>
+              <Label htmlFor="currentStock">Current Stock (End of Day)</Label>
               <Input
                 id="currentStock"
                 type="number"
@@ -156,9 +180,7 @@ export function StockEntryForm({ stores, products, onSubmit }: StockEntryFormPro
                 data-testid="input-current-stock"
               />
             </div>
-          </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="waste">Waste Quantity</Label>
               <Input
@@ -170,26 +192,13 @@ export function StockEntryForm({ stores, products, onSubmit }: StockEntryFormPro
                 required
                 data-testid="input-waste"
               />
-              {wastePercent > 3 && (
+              {!isStaff && wastePercent > 3 && (
                 <p className="text-xs text-destructive">Warning: Waste exceeds 3% limit ({wastePercent.toFixed(1)}%)</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sales">Sales Quantity</Label>
-              <Input
-                id="sales"
-                type="number"
-                min="0"
-                value={formData.sales}
-                onChange={(e) => handleChange("sales", Number(e.target.value))}
-                required
-                data-testid="input-sales"
-              />
-            </div>
           </div>
 
-          {discrepancy !== null && discrepancy > 5 && (
+          {!isStaff && discrepancy !== null && discrepancy > 5 && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
