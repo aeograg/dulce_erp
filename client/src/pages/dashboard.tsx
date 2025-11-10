@@ -7,16 +7,16 @@ import { useAuth } from "@/lib/auth";
 export default function Dashboard() {
   const { user } = useAuth();
   
-  const { data: products = [] } = useQuery({
+  const { data: products = [] } = useQuery<any[]>({
     queryKey: ["/api/products"],
   });
 
-  const { data: lowStockProducts = [] } = useQuery({
+  const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/analytics/low-stock"],
     enabled: user?.role === "Admin" || user?.role === "Manager",
   });
 
-  const { data: discrepanciesData = [] } = useQuery({
+  const { data: discrepanciesData = [] } = useQuery<any[]>({
     queryKey: ["/api/analytics/discrepancies"],
     enabled: user?.role === "Admin" || user?.role === "Manager",
   });
