@@ -86,7 +86,7 @@ export default function StockUpdate() {
 
   const filteredEntries = stockEntries.filter((entry: any) => {
     const matchesDate = !filterDate || entry.date === filterDate;
-    const matchesStore = !filterStore || entry.storeId === filterStore;
+    const matchesStore = !filterStore || filterStore === "all" || entry.storeId === filterStore;
     return matchesDate && matchesStore;
   });
 
@@ -190,7 +190,7 @@ export default function StockUpdate() {
                   <SelectValue placeholder="All stores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All stores</SelectItem>
+                  <SelectItem value="all">All stores</SelectItem>
                   {stores.map((store: any) => (
                     <SelectItem key={store.id} value={store.id}>
                       {store.name}

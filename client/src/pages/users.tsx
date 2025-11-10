@@ -32,14 +32,14 @@ export default function Users() {
     username: "",
     password: "",
     role: "Staff",
-    storeId: "",
+    storeId: "none",
   });
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [] } = useQuery<any[]>({
     queryKey: ["/api/users"],
   });
 
-  const { data: stores = [] } = useQuery({
+  const { data: stores = [] } = useQuery<any[]>({
     queryKey: ["/api/stores"],
   });
 
@@ -94,7 +94,7 @@ export default function Users() {
   });
 
   const resetForm = () => {
-    setFormData({ username: "", password: "", role: "Staff", storeId: "" });
+    setFormData({ username: "", password: "", role: "Staff", storeId: "none" });
     setEditingUser(null);
   };
 
@@ -104,7 +104,7 @@ export default function Users() {
       username: user.username,
       password: "",
       role: user.role,
-      storeId: user.storeId || "",
+      storeId: user.storeId || "none",
     });
     setOpen(true);
   };
@@ -112,7 +112,7 @@ export default function Users() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const userData = { ...formData };
-    if (!userData.storeId) {
+    if (!userData.storeId || userData.storeId === "none") {
       delete userData.storeId;
     }
     if (editingUser) {
@@ -206,7 +206,7 @@ export default function Users() {
                       <SelectValue placeholder="Select store (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific store</SelectItem>
+                      <SelectItem value="none">No specific store</SelectItem>
                       {stores.map((store: any) => (
                         <SelectItem key={store.id} value={store.id}>
                           {store.name}
