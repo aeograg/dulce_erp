@@ -12,11 +12,11 @@ export default function Products() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/products"],
   });
 
-  const { data: lowStockProducts = [] } = useQuery({
+  const { data: lowStockProducts = [] } = useQuery<any[]>({
     queryKey: ["/api/analytics/low-stock"],
   });
 

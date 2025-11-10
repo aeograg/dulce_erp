@@ -15,12 +15,11 @@ import {
 
 interface Product {
   id?: string;
+  code: string;
   name: string;
   unitCost: number;
   sellingPrice: number;
   minStockLevel: number;
-  laborCost?: number;
-  overheadCost?: number;
 }
 
 interface ProductFormProps {
@@ -33,12 +32,11 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<Product>(
     product || {
+      code: "",
       name: "",
       unitCost: 0,
       sellingPrice: 0,
       minStockLevel: 0,
-      laborCost: 0,
-      overheadCost: 0,
     }
   );
 
@@ -52,12 +50,11 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
     setOpen(false);
     if (!product) {
       setFormData({
+        code: "",
         name: "",
         unitCost: 0,
         sellingPrice: 0,
         minStockLevel: 0,
-        laborCost: 0,
-        overheadCost: 0,
       });
     }
   };
@@ -81,6 +78,18 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="code">Product Code</Label>
+              <Input
+                id="code"
+                value={formData.code}
+                onChange={(e) => handleChange("code", e.target.value)}
+                placeholder="e.g., CROIS-001"
+                required
+                data-testid="input-product-code"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Product Name</Label>
               <Input
@@ -123,45 +132,17 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="minStockLevel">Min Stock Level</Label>
-                <Input
-                  id="minStockLevel"
-                  type="number"
-                  min="0"
-                  value={formData.minStockLevel}
-                  onChange={(e) => handleChange("minStockLevel", Number(e.target.value))}
-                  required
-                  data-testid="input-min-stock"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="laborCost">Labor Cost ($)</Label>
-                <Input
-                  id="laborCost"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.laborCost}
-                  onChange={(e) => handleChange("laborCost", Number(e.target.value))}
-                  data-testid="input-labor-cost"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="overheadCost">Overhead Cost ($)</Label>
-                <Input
-                  id="overheadCost"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.overheadCost}
-                  onChange={(e) => handleChange("overheadCost", Number(e.target.value))}
-                  data-testid="input-overhead-cost"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="minStockLevel">Min Stock Level</Label>
+              <Input
+                id="minStockLevel"
+                type="number"
+                min="0"
+                value={formData.minStockLevel}
+                onChange={(e) => handleChange("minStockLevel", Number(e.target.value))}
+                required
+                data-testid="input-min-stock"
+              />
             </div>
 
             <div className="p-4 bg-muted rounded-md">
