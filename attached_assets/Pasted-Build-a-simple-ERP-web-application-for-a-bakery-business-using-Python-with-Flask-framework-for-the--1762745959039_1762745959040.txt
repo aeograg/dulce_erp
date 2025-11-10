@@ -1,0 +1,44 @@
+Build a simple ERP web application for a bakery business using Python with Flask framework (for the backend), SQLite database (via SQLAlchemy ORM), and Bootstrap for basic, mobile-friendly UI styling. The app should be easy to use with a simple interface, run initially on Replit, and be designed for later hosting (e.g., on a server like Heroku or VPS). Include basic reports like stock summaries and cost breakdowns. Implement role-based access: Admin (full access to all features, user management), Manager (view/edit inventory/stock, reports), Staff (input stock/deliveries only). Use Flask-Login for authentication and role checks.
+Start building module by module, testing each step. Provide code updates and run instructions after each module. Use environment variables for secrets (e.g., via .env file on Replit).
+
+Core Setup:
+Set up Flask app with routes for login/logout, home dashboard.
+Database models: User (id, username, password_hash, role).
+Role enforcement: Decorators to restrict routes (e.g., @admin_only, @manager_or_admin).
+Seed users: admin/password (Admin), manager/password (Manager), staff/password (Staff).
+UI: Responsive Bootstrap navbar (links vary by role), simple forms/tables. Ensure mobile-friendly with meta viewport and Bootstrap grids.
+
+Inventory Tracking Module:
+Models: Product (id, name, unit_cost, selling_price, min_stock_level).
+Routes: CRUD for products (Admin/Manager only). List view with search/filter by name.
+Dashboard: Show products below min stock (alerts for Manager/Admin).
+
+Stock Tracking Module:
+Models: Store (id, name - hardcoded: Store1 (main), Store2 (daily delivery), Store3 (every 2 days)).
+StockEntry (id, date, product_id, store_id, delivered, current_stock, waste, sales, expected_remaining, reported_remaining, discrepancy).
+Routes: Staff form to input daily stock (date, product, store, delivered, current_stock, waste - cap at 3%).
+Auto-calculate: Expected = previous expected (fetch from DB) + delivered - sales - waste; Discrepancy = reported - expected; Alert if |discrepancy| > 5% delivered.
+Delivery plan: Route for Manager/Admin to generate daily/weekly plan based on min levels + average sales (from history).
+Basic report: Table of daily stock summaries, discrepancies (filter by date/store).
+
+Square Integration for Sales Data:
+Placeholder for Square API: Install 'square' package if available; use env var SQUARE_API_KEY (user will provide later).
+Route: Manager/Admin to import daily sales (pull by product/store, update StockEntry sales field).
+On import, recalculate discrepancies/expecteds.
+If API not ready, use manual input form for sales as fallback.
+
+Cost Calculation Module:
+Models: Ingredient (id, name, cost_per_unit), Recipe (id, product_id, ingredient_id, quantity).
+Add to Product: labor_cost, overhead_cost.
+Route: Admin/Manager form to add/update recipes/costs; Auto-calculate unit_cost = sum(ingredient cost * qty) + labor + overhead.
+Display profit_margin = (selling_price - unit_cost) / selling_price * 100.
+Basic report: Product list with costs, margins (sortable table).
+
+
+Overall:
+
+Keep UI simple: Clean forms, tables, buttons. Use Bootstrap for responsiveness on mobile.
+Data flow: Staff inputs stock, system (or manual) adds sales, calcs discrepancies/plans.
+Security: Hash passwords, CSRF protection.
+Testing: Include sample data (products like P001 Croissant, P002 Danish, etc.).
+Make modular with comments. After build, guide on running on Replit and exporting for hosting. Ask for feedback/user input (e.g., API keys) as needed.
