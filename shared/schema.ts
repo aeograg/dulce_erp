@@ -79,3 +79,16 @@ export const stockEntries = pgTable("stock_entries", {
 export const insertStockEntrySchema = createInsertSchema(stockEntries).omit({ id: true, createdAt: true });
 export type InsertStockEntry = z.infer<typeof insertStockEntrySchema>;
 export type StockEntry = typeof stockEntries.$inferSelect;
+
+export const deliveries = pgTable("deliveries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: date("date").notNull(),
+  storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantitySent: integer("quantity_sent").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: true, createdAt: true });
+export type InsertDelivery = z.infer<typeof insertDeliverySchema>;
+export type Delivery = typeof deliveries.$inferSelect;

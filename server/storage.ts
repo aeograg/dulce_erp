@@ -6,6 +6,7 @@ import {
   ingredients, 
   recipes, 
   stockEntries,
+  deliveries,
   type User,
   type InsertUser,
   type Store,
@@ -18,6 +19,8 @@ import {
   type InsertRecipe,
   type StockEntry,
   type InsertStockEntry,
+  type Delivery,
+  type InsertDelivery,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -66,6 +69,14 @@ export interface IStorage {
   getLatestStockEntry(productId: string, storeId: string): Promise<StockEntry | undefined>;
   createStockEntry(entry: InsertStockEntry): Promise<StockEntry>;
   updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined>;
+  
+  // Deliveries
+  getAllDeliveries(): Promise<Delivery[]>;
+  getDeliveriesByDate(date: string): Promise<Delivery[]>;
+  getDeliveriesByStore(storeId: string): Promise<Delivery[]>;
+  createDelivery(delivery: InsertDelivery): Promise<Delivery>;
+  updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined>;
+  deleteDelivery(id: string): Promise<void>;
   
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
@@ -252,6 +263,33 @@ export class DatabaseStorage implements IStorage {
   async updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined> {
     const result = await db.update(stockEntries).set(entry).where(eq(stockEntries.id, id)).returning();
     return result[0];
+  }
+
+  // Deliveries
+  async getAllDeliveries(): Promise<Delivery[]> {
+    return await db.select().from(deliveries).orderBy(desc(deliveries.date));
+  }
+
+  async getDeliveriesByDate(date: string): Promise<Delivery[]> {
+    return await db.select().from(deliveries).where(eq(deliveries.date, date)).orderBy(deliveries.storeId);
+  }
+
+  async getDeliveriesByStore(storeId: string): Promise<Delivery[]> {
+    return await db.select().from(deliveries).where(eq(deliveries.storeId, storeId)).orderBy(desc(deliveries.date));
+  }
+
+  async createDelivery(delivery: InsertDelivery): Promise<Delivery> {
+    const result = await db.insert(deliveries).values(delivery).returning();
+    return result[0];
+  }
+
+  async updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined> {
+    const result = await db.update(deliveries).set(delivery).where(eq(deliveries.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteDelivery(id: string): Promise<void> {
+    await db.delete(deliveries).where(eq(deliveries.id, id));
   }
 
   // Analytics

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, requireAuth, requireRole } from "./auth";
-import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, recipes } from "@shared/schema";
+import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, recipes } from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
@@ -361,6 +361,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedEntry);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to update stock entry" });
+    }
+  });
+
+  // Delivery Routes
+  app.get("/api/deliveries", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const { date, storeId } = req.query;
+      
+      let deliveries;
+      if (date) {
+        deliveries = await storage.getDeliveriesByDate(date as string);
+      } else if (storeId) {
+        deliveries = await storage.getDeliveriesByStore(storeId as string);
+      } else {
+        deliveries = await storage.getAllDeliveries();
+      }
+      
+      res.json(deliveries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch deliveries" });
+    }
+  });
+
+  app.post("/api/deliveries", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const deliveryData = insertDeliverySchema.parse(req.body);
+      const delivery = await storage.createDelivery(deliveryData);
+      res.status(201).json(delivery);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create delivery" });
+    }
+  });
+
+  app.patch("/api/deliveries/:id", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const updateData = insertDeliverySchema.partial().parse(req.body);
+      const delivery = await storage.updateDelivery(req.params.id, updateData);
+      if (!delivery) {
+        return res.status(404).json({ error: "Delivery not found" });
+      }
+      res.json(delivery);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update delivery" });
+    }
+  });
+
+  app.delete("/api/deliveries/:id", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      await storage.deleteDelivery(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete delivery" });
     }
   });
 
