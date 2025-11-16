@@ -35,8 +35,8 @@ export default function StockControl() {
   const productMap = new Map(products.map((p: any) => [p.id, p.name]));
 
   const filteredEntries = stockEntries.filter((entry) => {
-    if (filterDate && entry.date !== filterDate) return false;
-    if (filterStore !== "all" && entry.storeId !== filterStore) return false;
+    if (filterDate && filterDate.trim() !== "" && entry.date !== filterDate) return false;
+    if (filterStore !== "all" && entry.storeId.toString() !== filterStore) return false;
     return true;
   });
 
