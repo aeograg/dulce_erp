@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
 interface Product {
   id?: string;
   code: string;
@@ -21,49 +20,52 @@ interface Product {
   sellingPrice: number;
   minStockLevel: number;
 }
-
 interface ProductFormProps {
   product?: Product;
   onSubmit: (product: Product) => void;
   trigger?: React.ReactNode;
 }
-
 export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState<Product>(
-    product || {
-      code: "",
-      name: "",
-      unitCost: 0,
-      sellingPrice: 0,
-      minStockLevel: 0,
-    }
-  );
-
-  const handleChange = (field: keyof Product, value: any) => {
+  const [formData, setFormData] = useState({
+    code: product?.code || "",
+    name: product?.name || "",
+    unitCost: product ? String(product.unitCost) : "",
+    sellingPrice: product ? String(product.sellingPrice) : "",
+    minStockLevel: product ? String(product.minStockLevel) : "",
+  });
+  const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submittedData: Product = {
+      ...formData,
+      unitCost: formData.unitCost === '' ? 0 : Number(formData.unitCost),
+      sellingPrice: formData.sellingPrice === '' ? 0 : Number(formData.sellingPrice),
+      minStockLevel: formData.minStockLevel === '' ? 0 : Number(formData.minStockLevel),
+    };
+    if (product?.id) {
+      submittedData.id = product.id;
+    }
+    onSubmit(submittedData);
     setOpen(false);
     if (!product) {
       setFormData({
         code: "",
         name: "",
-        unitCost: 0,
-        sellingPrice: 0,
-        minStockLevel: 0,
+        unitCost: "",
+        sellingPrice: "",
+        minStockLevel: "",
       });
     }
   };
-
+  const unitCostNum = formData.unitCost === '' ? 0 : Number(formData.unitCost);
+  const sellingPriceNum = formData.sellingPrice === '' ? 0 : Number(formData.sellingPrice);
   const profitMargin =
-    formData.sellingPrice > 0
-      ? ((formData.sellingPrice - formData.unitCost) / formData.sellingPrice) * 100
+    sellingPriceNum > 0
+      ? ((sellingPriceNum - unitCostNum) / sellingPriceNum) * 100
       : 0;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -89,7 +91,6 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 data-testid="input-product-code"
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="name">Product Name</Label>
               <Input
@@ -101,7 +102,6 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 data-testid="input-product-name"
               />
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="unitCost">Unit Cost ($)</Label>
@@ -111,12 +111,11 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                   step="0.01"
                   min="0"
                   value={formData.unitCost}
-                  onChange={(e) => handleChange("unitCost", Number(e.target.value))}
+                  onChange={(e) => handleChange("unitCost", e.target.value)}
                   required
                   data-testid="input-unit-cost"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="sellingPrice">Selling Price ($)</Label>
                 <Input
@@ -125,13 +124,12 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                   step="0.01"
                   min="0"
                   value={formData.sellingPrice}
-                  onChange={(e) => handleChange("sellingPrice", Number(e.target.value))}
+                  onChange={(e) => handleChange("sellingPrice", e.target.value)}
                   required
                   data-testid="input-selling-price"
                 />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="minStockLevel">Min Stock Level</Label>
               <Input
@@ -139,12 +137,11 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 type="number"
                 min="0"
                 value={formData.minStockLevel}
-                onChange={(e) => handleChange("minStockLevel", Number(e.target.value))}
+                onChange={(e) => handleChange("minStockLevel", e.target.value)}
                 required
                 data-testid="input-min-stock"
               />
             </div>
-
             <div className="p-4 bg-muted rounded-md">
               <p className="text-sm font-medium">Profit Margin: {profitMargin.toFixed(2)}%</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -152,7 +149,6 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
               </p>
             </div>
           </div>
-
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
