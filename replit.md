@@ -138,6 +138,9 @@ Preferred communication style: Simple, everyday language.
 - ✅ User management with store assignments (Admin-only CRUD operations)
 - ✅ Two-stage stock entry workflow (Staff → Admin/Manager)
 - ✅ Stock update interface for completing pending entries
+- ✅ **NEW: Delivery Module** - Dedicated delivery entry screen for Admin/Manager to record product deliveries to stores
+- ✅ **NEW: Stock Control Module** - Comprehensive stock entry viewer with filters, calculated metrics, and summary statistics
+- ✅ **NEW: Remaining Stock Dashboard** - Real-time stock level monitoring with low stock alerts grouped by store
 - ✅ Delivery forecasting based on historical sales patterns
 - ✅ Role-based access control with store restrictions for Staff
 - ✅ Automatic discrepancy detection and flagging (>5% threshold)
@@ -145,9 +148,37 @@ Preferred communication style: Simple, everyday language.
 - ✅ Multi-store inventory tracking
 - ✅ Dashboard with alerts for low stock and discrepancies
 
+**New Modules (Added Nov 16, 2025)**
+
+1. **Delivery Module** (`/deliveries` - Admin/Manager only)
+   - Form-based delivery entry with date selector (defaults to today)
+   - Store selector dropdown
+   - Dynamic product list with quantity input fields (integer, defaults to 0)
+   - Saves to `deliveries` table with date, storeId, productId, and quantitySent
+   - Recent deliveries list showing last 10 entries
+   - Batch validation and sequential error handling
+
+2. **Stock Control Module** (`/stock-control` - Admin/Manager only)
+   - Comprehensive table view of all stock entries
+   - Columns: date, store, product, delivered, current stock, waste, sales, expected remaining, discrepancy %
+   - Filters: date picker and store dropdown
+   - Summary statistics cards: total entries, high discrepancies (>=5%), total waste
+   - Color-coded discrepancy badges (destructive for >=5%)
+   - Loading states and empty state handling
+
+3. **Remaining Stock Dashboard** (`/remaining-stock` - Admin/Manager only)
+   - Real-time stock level monitoring across all stores
+   - Displays latest stock entry per product per store
+   - Columns: product, reported remaining (current stock), expected remaining (calculated), min stock level, status
+   - Low stock alerts with badge indicators
+   - Grouped by store for easy navigation
+   - Summary cards: total products, low stock alerts, stores monitored
+   - Loading states and empty state messaging
+
 **Future Enhancement Opportunities**
 - Square API integration for automated sales data import
 - Advanced reporting with custom date ranges and export functionality
 - Email notifications for critical alerts (low stock, high discrepancies)
 - Mobile-optimized interface for field staff
 - Batch stock entry for multiple products at once
+- Integration between Delivery Module and Stock Entry (auto-populate delivered quantities)
