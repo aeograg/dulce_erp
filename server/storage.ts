@@ -365,7 +365,7 @@ export class DatabaseStorage implements IStorage {
   async getLatestInventoryByProduct(productId: string): Promise<Inventory | undefined> {
     const result = await db.select().from(inventory)
       .where(eq(inventory.productId, productId))
-      .orderBy(desc(inventory.date))
+      .orderBy(desc(inventory.createdAt))
       .limit(1);
     return result[0];
   }
