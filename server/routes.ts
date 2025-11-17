@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, requireAuth, requireRole } from "./auth";
-import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, recipes } from "@shared/schema";
+import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, insertInventorySchema, recipes } from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
@@ -433,6 +433,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(sale);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to create sale" });
+    }
+  });
+
+  // Inventory Routes
+  app.get("/api/inventory", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const allInventory = await storage.getAllInventory();
+      res.json(allInventory);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory" });
+    }
+  });
+
+  app.get("/api/inventory/current", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const currentLevels = await storage.getCurrentInventoryLevels();
+      const levelsObject = Object.fromEntries(currentLevels);
+      res.json(levelsObject);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch current inventory levels" });
+    }
+  });
+
+  app.get("/api/inventory/product/:productId", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const inventoryHistory = await storage.getInventoryByProduct(req.params.productId);
+      res.json(inventoryHistory);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch product inventory" });
+    }
+  });
+
+  app.post("/api/inventory/production", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const validatedData = insertInventorySchema.parse(req.body);
+      const entry = await storage.recordProduction(validatedData);
+      res.status(201).json(entry);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to record production" });
     }
   });
 
