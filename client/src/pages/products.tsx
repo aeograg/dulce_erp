@@ -79,6 +79,12 @@ export default function Products() {
     { key: "code", label: "Code", sortable: true },
     { key: "name", label: "Product Name", sortable: true },
     {
+      key: "batchYield",
+      label: "Batch Yield",
+      sortable: true,
+      render: (item: any) => `${item.batchYield} units`,
+    },
+    {
       key: "unitCost",
       label: "Unit Cost",
       sortable: true,

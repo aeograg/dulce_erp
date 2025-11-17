@@ -20,6 +20,7 @@ interface Product {
   sellingPrice: number;
   minStockLevel: number;
   maxWastePercent: number;
+  batchYield: number;
 }
 interface ProductFormProps {
   product?: Product;
@@ -35,6 +36,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
     sellingPrice: product ? String(product.sellingPrice) : "",
     minStockLevel: product ? String(product.minStockLevel) : "",
     maxWastePercent: product ? String(product.maxWastePercent) : "5.0",
+    batchYield: product ? String(product.batchYield) : "1",
   });
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -47,6 +49,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
       sellingPrice: formData.sellingPrice === '' ? 0 : Number(formData.sellingPrice),
       minStockLevel: formData.minStockLevel === '' ? 0 : Number(formData.minStockLevel),
       maxWastePercent: formData.maxWastePercent === '' ? 5.0 : Number(formData.maxWastePercent),
+      batchYield: formData.batchYield === '' ? 1 : Number(formData.batchYield),
     };
     if (product?.id) {
       submittedData.id = product.id;
@@ -61,6 +64,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
         sellingPrice: "",
         minStockLevel: "",
         maxWastePercent: "5.0",
+        batchYield: "1",
       });
     }
   };
@@ -147,6 +151,23 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                   data-testid="input-min-stock"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="batchYield">Batch Yield (Units per Batch)</Label>
+                <Input
+                  id="batchYield"
+                  type="number"
+                  step="1"
+                  min="0.01"
+                  value={formData.batchYield}
+                  onChange={(e) => handleChange("batchYield", e.target.value)}
+                  placeholder="1"
+                  required
+                  data-testid="input-batch-yield"
+                  title="Number of units produced per batch (e.g., 12 croissants per batch)"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-1">
               <div className="space-y-2">
                 <Label htmlFor="maxWastePercent">Max Waste % (Acceptable Waste)</Label>
                 <Input
