@@ -31,8 +31,23 @@ export default function StockControl() {
     queryKey: ["/api/products"],
   });
 
+  const { data: deliveries = [], isLoading: deliveriesLoading } = useQuery<any[]>({
+    queryKey: ["/api/deliveries"],
+  });
+
   const storeMap = new Map(stores.map((s: any) => [s.id, s.name]));
   const productMap = new Map(products.map((p: any) => [p.id, p.name]));
+
+  // Calculate delivered amounts from deliveries data
+  const getDeliveredAmount = (date: string, storeId: number, productId: number) => {
+    return deliveries
+      .filter((d: any) => 
+        d.date === date && 
+        d.storeId === storeId && 
+        d.productId === productId
+      )
+      .reduce((sum: number, d: any) => sum + (d.quantitySent || 0), 0);
+  };
 
   const filteredEntries = stockEntries.filter((entry) => {
     if (filterDate && filterDate.trim() !== "" && entry.date !== filterDate) return false;
@@ -44,6 +59,7 @@ export default function StockControl() {
     ...entry,
     storeName: storeMap.get(entry.storeId) || "Unknown",
     productName: productMap.get(entry.productId) || "Unknown",
+    deliveredAmount: getDeliveredAmount(entry.date, entry.storeId, entry.productId),
   }));
 
   const columns = [
@@ -64,12 +80,12 @@ export default function StockControl() {
       sortable: true,
     },
     {
-      key: "delivered",
+      key: "deliveredAmount",
       label: "Delivered",
       sortable: true,
       render: (item: any) => (
         <span data-testid={`delivered-${item.id}`}>
-          {item.delivered || 0}
+          {item.deliveredAmount}
         </span>
       ),
     },
@@ -171,7 +187,7 @@ export default function StockControl() {
         </div>
       </div>
 
-      {isLoading || storesLoading || productsLoading ? (
+      {isLoading || storesLoading || productsLoading || deliveriesLoading ? (
         <Card>
           <CardContent className="py-12">
             <div className="flex items-center justify-center">
