@@ -32,9 +32,6 @@ export default function SalesDataEntry() {
     queryKey: ["/api/products"],
   });
 
-  const { data: stockEntries = [], isLoading: entriesLoading } = useQuery<any[]>({
-    queryKey: ["/api/stock-entries"],
-  });
 
   const saveMutation = useMutation({
     mutationFn: async (salesData: any[]) => {
@@ -43,23 +40,16 @@ export default function SalesDataEntry() {
       
       for (const sale of salesData) {
         try {
-          // Find the matching stock entry
-          const entry = stockEntries.find(
-            (e: any) => 
-              e.date === sale.date && 
-              e.storeId === sale.storeId && 
-              e.productId === sale.productId
-          );
-          
-          if (entry) {
-            // Update existing entry with sales data
-            const result = await apiRequest("PATCH", `/api/stock-entries/${entry.id}`, {
-              sales: sale.sales
-            });
-            results.push(result);
-          } else {
-            errors.push({ product: sale.productId, error: "No stock entry found for this date" });
-          }
+          // Create a new stock entry with sales data
+          const result = await apiRequest("POST", "/api/stock-entries", {
+            date: sale.date,
+            storeId: sale.storeId,
+            productId: sale.productId,
+            currentStock: 0,
+            waste: 0,
+            sales: sale.sales,
+          });
+          results.push(result);
         } catch (error: any) {
           errors.push({ product: sale.productId, error: error.message });
         }
@@ -149,15 +139,6 @@ export default function SalesDataEntry() {
   const storeMap = new Map(stores.map(s => [s.id, s.name]));
   const productMap = new Map(products.map(p => [p.id, p.name]));
 
-  // Get stock entries for the selected date and store to show what's available
-  const relevantEntries = stockEntries.filter((entry: any) => 
-    entry.date === selectedDate && 
-    (!selectedStore || entry.storeId === parseInt(selectedStore))
-  );
-
-  // Get products that have stock entries for this date/store
-  const availableProductIds = new Set(relevantEntries.map((e: any) => e.productId));
-
   return (
     <div className="space-y-6">
       <div>
@@ -216,43 +197,34 @@ export default function SalesDataEntry() {
                   <>
                     <div>
                       <h3 className="text-sm font-medium mb-3">Sales Quantities</h3>
-                      {productsLoading || entriesLoading ? (
+                      {productsLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="w-6 h-6 animate-spin" />
                         </div>
                       ) : (
                         <div className="grid gap-3">
-                          {products.map((product: any) => {
-                            const hasStockEntry = availableProductIds.has(product.id);
-                            return (
-                              <div
-                                key={product.id}
-                                className="grid grid-cols-[1fr,120px] gap-3 items-center p-3 border rounded-md"
-                                data-testid={`product-row-${product.id}`}
-                              >
-                                <div>
-                                  <Label htmlFor={`qty-${product.id}`} className="font-normal">
-                                    {product.name}
-                                    {!hasStockEntry && (
-                                      <span className="ml-2 text-xs text-muted-foreground">
-                                        (No stock entry for this date)
-                                      </span>
-                                    )}
-                                  </Label>
-                                </div>
-                                <Input
-                                  id={`qty-${product.id}`}
-                                  type="number"
-                                  min="0"
-                                  placeholder="0"
-                                  value={salesQuantities[product.id] || ""}
-                                  onChange={(e) => handleQuantityChange(product.id.toString(), e.target.value)}
-                                  disabled={!hasStockEntry}
-                                  data-testid={`input-sales-${product.id}`}
-                                />
+                          {products.map((product: any) => (
+                            <div
+                              key={product.id}
+                              className="grid grid-cols-[1fr,120px] gap-3 items-center p-3 border rounded-md"
+                              data-testid={`product-row-${product.id}`}
+                            >
+                              <div>
+                                <Label htmlFor={`qty-${product.id}`} className="font-normal">
+                                  {product.name}
+                                </Label>
                               </div>
-                            );
-                          })}
+                              <Input
+                                id={`qty-${product.id}`}
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={salesQuantities[product.id] || ""}
+                                onChange={(e) => handleQuantityChange(product.id.toString(), e.target.value)}
+                                data-testid={`input-sales-${product.id}`}
+                              />
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -303,8 +275,8 @@ export default function SalesDataEntry() {
                 <p>Enter the number of units sold for each product today.</p>
               </div>
               <div>
-                <p className="font-medium text-foreground mb-1">Stock Entries Required</p>
-                <p>You can only enter sales for products that have a stock entry for the selected date.</p>
+                <p className="font-medium text-foreground mb-1">Enter Any Product</p>
+                <p>You can enter sales data for any product. If no stock entry exists, one will be created automatically.</p>
               </div>
               <div>
                 <p className="font-medium text-foreground mb-1">Future Integration</p>
