@@ -82,8 +82,10 @@ Preferred communication style: Simple, everyday language.
 - **Recipes**: Many-to-many relationship between products and ingredients with quantities for cost calculation
 - **StockEntries**: Daily stock tracking with:
   - Staff-entered: currentStock, waste (end-of-day counts)
-  - Admin/Manager-entered: delivered, sales (completed later)
   - Auto-calculated: expectedRemaining, discrepancy percentage
+- **Sales**: Separate sales tracking table with date, store, product, quantity, unit price, source (manual/square)
+- **Deliveries**: Delivery records with date, store, product, quantitySent
+- **Inventory**: Production center inventory with date, product, quantityInStock, quantityProduced, notes
 
 **Data Validation**
 - Zod schemas for runtime type validation
@@ -137,10 +139,11 @@ Preferred communication style: Simple, everyday language.
 - ✅ Simplified product costing model (ingredient costs only, auto-calculated from recipes)
 - ✅ User management with store assignments (Admin-only CRUD operations)
 - ✅ Two-stage stock entry workflow (Staff enters stock/waste, Admin/Manager enters sales via Sales Data Entry)
-- ✅ **Sales Data Entry Module** - Easy daily sales entry form similar to stock entry, with future Square POS integration
-- ✅ **Delivery Module** - Dedicated delivery entry screen for Admin/Manager to record product deliveries to stores
-- ✅ **Stock Control Module** - Comprehensive stock entry viewer with filters, calculated metrics (including delivered amounts from deliveries), and summary statistics
+- ✅ **Sales Data Entry Module** - Easy daily sales entry form with separate sales table
+- ✅ **Delivery Module** - Dedicated delivery entry screen with auto-inventory deduction
+- ✅ **Stock Control Module** - Comprehensive stock entry viewer with aggregated sales and delivery data
 - ✅ **Remaining Stock Dashboard** - Real-time stock level monitoring with low stock alerts grouped by store
+- ✅ **Inventory Module** - Production center inventory management with production recording and forecasting
 - ✅ Delivery forecasting based on historical sales patterns
 - ✅ Role-based access control with store restrictions for Staff
 - ✅ Automatic discrepancy detection and flagging (>5% threshold)
@@ -184,6 +187,28 @@ Preferred communication style: Simple, everyday language.
    - Grouped by store for easy navigation
    - Summary cards: total products, low stock alerts, stores monitored
    - Loading states and empty state messaging
+
+5. **Inventory Module** (Added Nov 17, 2025)
+   - **Production Entry** (`/production-entry` - Admin/Manager only)
+     - Form to record daily/weekly production at production center
+     - Automatically adds produced quantity to inventory stock
+     - Recent production history showing last 10 entries
+     - Validation prevents zero or negative production quantities
+   - **Inventory Dashboard** (`/inventory-dashboard` - Admin/Manager only)
+     - Current stock levels for all products at production center
+     - Weekly demand calculation based on last 7 days of sales and deliveries
+     - Suggested production forecast (maintains 2 weeks of stock)
+     - Stock level indicators: Good (2+ weeks), Medium (1-2 weeks), Low (<1 week)
+     - Total inventory value calculation
+     - Low stock alerts for products needing production
+   - **Auto-Deduction Integration**
+     - Deliveries automatically deduct from production center inventory
+     - Prevents over-delivery with insufficient inventory validation
+     - Clear error messages when delivery exceeds available stock
+   - **Data Model**
+     - `inventory` table tracks: date, productId, quantityInStock, quantityProduced, notes
+     - Cumulative stock tracking (each entry shows total available inventory)
+     - Production center uses first store or dedicated production center entry
 
 **Future Enhancement Opportunities**
 - Square API integration for automated sales data import
