@@ -57,7 +57,6 @@ export default function Inventory() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!selectedProduct) {
       toast({
         title: "Please select a product",
@@ -65,7 +64,6 @@ export default function Inventory() {
       });
       return;
     }
-
     if (!quantityProduced || quantityProduced <= 0) {
       toast({
         title: "Please enter a positive quantity",
@@ -74,7 +72,6 @@ export default function Inventory() {
       });
       return;
     }
-
     recordProductionMutation.mutate({
       date: selectedDate,
       productId: selectedProduct,
@@ -96,8 +93,8 @@ export default function Inventory() {
     if (sortField !== field) {
       return <ArrowUpDown className="w-4 h-4 ml-1 inline opacity-30" />;
     }
-    return sortDirection === "asc" ? 
-      <ArrowUp className="w-4 h-4 ml-1 inline" /> : 
+    return sortDirection === "asc" ?
+      <ArrowUp className="w-4 h-4 ml-1 inline" /> :
       <ArrowDown className="w-4 h-4 ml-1 inline" />;
   };
 
@@ -116,7 +113,7 @@ export default function Inventory() {
     }
   });
 
-  // Create sorted inventory list
+  // Create inventory list
   const inventoryList = products.map((product: any) => ({
     id: product.id,
     name: product.name,
@@ -124,15 +121,19 @@ export default function Inventory() {
     lastUpdated: latestInventoryDates.get(product.id) || "N/A",
   }));
 
-  const sortedInventory = [...inventoryList].sort((a, b) => {
+  // Filter out items with stock <= 0
+  const filteredInventory = inventoryList.filter(item => item.stock > 0);
+
+  // Sort the filtered list
+  const sortedInventory = [...filteredInventory].sort((a, b) => {
     let comparison = 0;
-    
+
     if (sortField === "name") {
       comparison = a.name.localeCompare(b.name);
     } else if (sortField === "stock") {
       comparison = a.stock - b.stock;
     }
-    
+
     return sortDirection === "asc" ? comparison : -comparison;
   });
 
@@ -144,7 +145,6 @@ export default function Inventory() {
         <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Inventory Management</h1>
         <p className="text-muted-foreground mt-2">Manage production center inventory and production</p>
       </div>
-
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -166,7 +166,6 @@ export default function Inventory() {
                   data-testid="input-production-date"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="product">Product</Label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
@@ -186,7 +185,6 @@ export default function Inventory() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity Produced</Label>
                 <Input
@@ -200,7 +198,6 @@ export default function Inventory() {
                   required
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes (Optional)</Label>
                 <Textarea
@@ -212,7 +209,6 @@ export default function Inventory() {
                   data-testid="input-notes"
                 />
               </div>
-
               <Button
                 type="submit"
                 className="w-full"
@@ -234,7 +230,6 @@ export default function Inventory() {
             </form>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Recent Production</CardTitle>
@@ -283,7 +278,6 @@ export default function Inventory() {
           </CardContent>
         </Card>
       </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Current Inventory</CardTitle>
@@ -294,9 +288,13 @@ export default function Inventory() {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-          ) : sortedInventory.length === 0 ? (
+          ) : inventoryList.length === 0 ? (
             <p className="text-muted-foreground text-center py-8" data-testid="text-no-inventory">
               No products in system
+            </p>
+          ) : sortedInventory.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8" data-testid="text-no-inventory">
+              No products with current stock
             </p>
           ) : (
             <div className="overflow-x-auto">
