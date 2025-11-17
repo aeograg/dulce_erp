@@ -8,8 +8,8 @@ interface StockSummary {
   storeName: string;
   productId: string;
   productName: string;
-  reportedRemaining: number;
-  expectedRemaining: number;
+  reportedStock: number;
+  expectedStock: number;
   minStockLevel: number;
   isLowStock: boolean;
   date: string;
@@ -54,10 +54,10 @@ export default function RemainingStock() {
           storeName: store.name,
           productId: entry.productId,
           productName: product.name,
-          reportedRemaining: entry.currentStock,
-          expectedRemaining: entry.expectedRemaining,
+          reportedStock: entry.reportedStock,
+          expectedStock: entry.expectedStock,
           minStockLevel: product.minStockLevel,
-          isLowStock: entry.currentStock < product.minStockLevel,
+          isLowStock: entry.reportedStock < product.minStockLevel,
           date: entry.date,
         });
       }
@@ -202,10 +202,10 @@ export default function RemainingStock() {
                             </div>
                           </td>
                           <td className="text-right py-3 px-2 font-medium" data-testid={`reported-${item.storeId}-${item.productId}`}>
-                            {item.reportedRemaining}
+                            {item.reportedStock}
                           </td>
                           <td className="text-right py-3 px-2 text-muted-foreground" data-testid={`expected-${item.storeId}-${item.productId}`}>
-                            {item.expectedRemaining}
+                            {item.expectedStock}
                           </td>
                           <td className="text-right py-3 px-2 text-muted-foreground" data-testid={`min-${item.storeId}-${item.productId}`}>
                             {item.minStockLevel}

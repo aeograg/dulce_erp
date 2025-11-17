@@ -50,8 +50,8 @@ export default function Reports() {
       delivered: entry.delivered,
       sales: entry.sales,
       waste: entry.waste,
-      expected: entry.expectedRemaining,
-      reported: entry.reportedRemaining,
+      expected: entry.expectedStock,
+      reported: entry.reportedStock,
       discrepancy: entry.discrepancy,
     }));
 

@@ -103,7 +103,7 @@ export default function DeliveryForecast() {
       sortable: true,
     },
     {
-      key: "currentStock",
+      key: "reportedStock",
       label: "End Stock",
       sortable: true,
     },

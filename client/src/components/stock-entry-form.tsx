@@ -25,7 +25,7 @@ interface StockEntry {
   productId: string;
   storeId: string;
   date: string;
-  currentStock: number;
+  reportedStock: number;
   waste: number;
 }
 
@@ -42,12 +42,12 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
     storeId: '',
   });
 
-  const [entries, setEntries] = useState<{ [productId: string]: { currentStock: string; waste: string } }>({});
+  const [entries, setEntries] = useState<{ [productId: string]: { reportedStock: string; waste: string } }>({});
 
   useEffect(() => {
-    const initialEntries: { [productId: string]: { currentStock: string; waste: string } } = {};
+    const initialEntries: { [productId: string]: { reportedStock: string; waste: string } } = {};
     products.forEach((product) => {
-      initialEntries[product.id] = { currentStock: '', waste: '' };
+      initialEntries[product.id] = { reportedStock: '', waste: '' };
     });
     setEntries(initialEntries);
   }, [products]);
@@ -56,7 +56,7 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleEntryChange = (productId: string, field: 'currentStock' | 'waste', value: string) => {
+  const handleEntryChange = (productId: string, field: 'reportedStock' | 'waste', value: string) => {
     setEntries((prev) => ({
       ...prev,
       [productId]: {
@@ -73,10 +73,10 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
     const waste = Number(entry.waste) || 0;
     if (waste === 0) return 0;
     
-    const currentStock = Number(entry.currentStock) || 0;
-    // Total inventory for the day = current stock + waste
+    const reportedStock = Number(entry.reportedStock) || 0;
+    // Total inventory for the day = reported stock + waste
     // (assuming no sales data at stock entry time)
-    const totalInventory = waste + currentStock;
+    const totalInventory = waste + reportedStock;
     
     if (totalInventory === 0) return 0;
     return (waste / totalInventory) * 100;
@@ -103,14 +103,14 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
     }
 
     Object.keys(entries).forEach((productId) => {
-      const { currentStock, waste } = entries[productId];
+      const { reportedStock, waste } = entries[productId];
       // Submit only if at least one field is filled; otherwise skip to avoid unnecessary entries
-      if (currentStock !== '' || waste !== '') {
+      if (reportedStock !== '' || waste !== '') {
         onSubmit({
           productId,
           storeId: formData.storeId,
           date: formData.date,
-          currentStock: currentStock === '' ? 0 : Number(currentStock),
+          reportedStock: reportedStock === '' ? 0 : Number(reportedStock),
           waste: waste === '' ? 0 : Number(waste),
         });
       }
@@ -121,9 +121,9 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
       date: new Date().toISOString().split("T")[0],
       storeId: '',
     });
-    const resetEntries: { [productId: string]: { currentStock: string; waste: string } } = {};
+    const resetEntries: { [productId: string]: { reportedStock: string; waste: string } } = {};
     products.forEach((product) => {
-      resetEntries[product.id] = { currentStock: '', waste: '' };
+      resetEntries[product.id] = { reportedStock: '', waste: '' };
     });
     setEntries(resetEntries);
   };
@@ -196,9 +196,9 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
                           type="number"
                           min="0"
                           step="any"
-                          value={entries[product.id]?.currentStock || ''}
-                          onChange={(e) => handleEntryChange(product.id, 'currentStock', e.target.value)}
-                          data-testid={`input-current-stock-${product.id}`}
+                          value={entries[product.id]?.reportedStock || ''}
+                          onChange={(e) => handleEntryChange(product.id, 'reportedStock', e.target.value)}
+                          data-testid={`input-reported-stock-${product.id}`}
                         />
                       </TableCell>
                       <TableCell>

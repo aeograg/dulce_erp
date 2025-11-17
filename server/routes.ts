@@ -321,25 +321,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get previous stock entry for calculations
       const prevEntry = await storage.getLatestStockEntry(entryData.productId, entryData.storeId);
-      const previousExpected = prevEntry?.expectedRemaining || 0;
+      const previousExpected = prevEntry?.expectedStock || 0;
       
-      // Calculate expected remaining
+      // Calculate expected stock
       const delivered = entryData.delivered || 0;
       const waste = entryData.waste || 0;
       const sales = entryData.sales || 0;
-      const currentStock = entryData.currentStock || 0;
+      const reportedStock = entryData.reportedStock || 0;
       
-      const expectedRemaining = previousExpected + delivered - waste - sales;
+      const expectedStock = previousExpected + delivered - waste - sales;
       
       // Calculate discrepancy percentage
       const discrepancy = delivered > 0 
-        ? ((currentStock - expectedRemaining) / delivered) * 100 
+        ? ((reportedStock - expectedStock) / delivered) * 100 
         : 0;
       
       const entry = await storage.createStockEntry({
         ...entryData,
-        expectedRemaining,
-        reportedRemaining: entryData.currentStock,
+        expectedStock,
+        reportedRemaining: entryData.reportedStock,
         discrepancy,
       });
       
@@ -359,15 +359,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Stock entry not found" });
       }
       
-      // Recalculate expected remaining and discrepancy
+      // Recalculate expected stock and discrepancy
       const previousExpected = 0; // You may want to get the actual previous stock
-      const expectedRemaining = previousExpected + (entry.delivered || 0) - (entry.waste || 0) - (entry.sales || 0);
+      const expectedStock = previousExpected + (entry.delivered || 0) - (entry.waste || 0) - (entry.sales || 0);
       const discrepancy = (entry.delivered || 0) > 0 
-        ? ((entry.currentStock - expectedRemaining) / (entry.delivered || 1)) * 100 
+        ? ((entry.reportedStock - expectedStock) / (entry.delivered || 1)) * 100 
         : 0;
       
       const updatedEntry = await storage.updateStockEntry(req.params.id, {
-        expectedRemaining,
+        expectedStock,
         discrepancy,
       });
       
@@ -435,11 +435,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             date: deliveryData.date,
             storeId: deliveryData.storeId,
             productId: deliveryData.productId,
-            currentStock: 0,
+            reportedStock: 0,
             waste: 0,
             sales: 0,
             delivered: quantitySent,
-            expectedRemaining: quantitySent,
+            expectedStock: quantitySent,
             reportedRemaining: 0,
             discrepancy: 0,
           });

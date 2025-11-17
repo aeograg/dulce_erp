@@ -75,8 +75,8 @@ export default function StockControl() {
     const deliveredAmount = getDeliveredAmount(entry.date, entry.storeId, entry.productId);
     const salesAmount = getSalesAmount(entry.date, entry.storeId, entry.productId);
     
-    // Total inventory = current stock + waste + sales (what we had during the day)
-    const totalDayInventory = (entry.currentStock || 0) + (entry.waste || 0) + salesAmount;
+    // Total inventory = reported stock + waste + sales (what we had during the day)
+    const totalDayInventory = (entry.reportedStock || 0) + (entry.waste || 0) + salesAmount;
     
     // Calculate waste percentage based on total inventory available
     const wastePercent = totalDayInventory > 0 ? ((entry.waste || 0) / totalDayInventory) * 100 : 0;
@@ -123,12 +123,12 @@ export default function StockControl() {
       ),
     },
     {
-      key: "currentStock",
-      label: "Current Stock",
+      key: "reportedStock",
+      label: "Reported Stock",
       sortable: true,
       render: (item: any) => (
-        <span data-testid={`current-stock-${item.id}`}>
-          {item.currentStock}
+        <span data-testid={`reported-stock-${item.id}`}>
+          {item.reportedStock}
         </span>
       ),
     },
@@ -160,12 +160,12 @@ export default function StockControl() {
       ),
     },
     {
-      key: "expectedRemaining",
-      label: "Expected Remaining",
+      key: "expectedStock",
+      label: "Expected Stock",
       sortable: true,
       render: (item: any) => (
         <span className="font-medium" data-testid={`expected-${item.id}`}>
-          {item.expectedRemaining}
+          {item.expectedStock}
         </span>
       ),
     },

@@ -425,7 +425,7 @@ export class DatabaseStorage implements IStorage {
     const latestStocks = await db
       .select({
         productId: stockEntries.productId,
-        currentStock: sql<number>`MAX(${stockEntries.currentStock})`.as('current_stock'),
+        currentStock: sql<number>`MAX(${stockEntries.reportedStock})`.as('current_stock'),
       })
       .from(stockEntries)
       .groupBy(stockEntries.productId);

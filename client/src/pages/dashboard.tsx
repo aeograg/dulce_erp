@@ -24,13 +24,13 @@ export default function Dashboard() {
   const lowStockItems = lowStockProducts.map((item: any) => ({
     id: item.id,
     name: item.name,
-    details: `Current: ${item.currentStock} units, Min: ${item.minStockLevel} units`,
+    details: `Current: ${item.reportedStock} units, Min: ${item.minStockLevel} units`,
   }));
 
   const discrepancies = discrepanciesData.slice(0, 5).map((item: any) => ({
     id: item.id,
     name: `${item.storeName} - ${item.productName}`,
-    details: `Discrepancy: ${Math.abs(item.discrepancy).toFixed(1)}% (Expected: ${item.expectedRemaining}, Reported: ${item.reportedRemaining})`,
+    details: `Discrepancy: ${Math.abs(item.discrepancy).toFixed(1)}% (Expected: ${item.expectedStock}, Reported: ${item.reportedStock})`,
   }));
 
   const avgMargin = products.length > 0
