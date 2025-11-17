@@ -216,21 +216,36 @@ Preferred communication style: Simple, everyday language.
    - Color-coded validation: red background for rows exceeding waste limits
    - Warning badges on entries that exceed product-specific waste thresholds
 
-2. **Inventory Page Reorganization (Tabbed Interface)**
-   - Tab 1: **Production Entry** - Record daily/weekly production with recent history
-   - Tab 2: **Current Inventory** - Simple stock levels table (product, stock, unit cost, value)
-   - Tab 3: **Weekly Needs** - Production forecasting and recommendations
-     - 7-day average demand calculation (sales + deliveries)
-     - Target stock: 2 weeks of demand
-     - Suggested production: target - current stock
-     - Status indicators: Good (2+ weeks), Medium (1-2 weeks), Low (<1 week)
-     - Summary cards: total products, low stock alerts, total inventory value
+2. **Inventory Page Reorganization**
+   - Removed tabbed interface per user request ("too many pages")
+   - Production entry form at the top
+   - Current Inventory table directly below showing:
+     - Product name (sortable - click header to toggle asc/desc)
+     - Quantity in stock (sortable)
+     - Last updated date
+     - Removed unit_cost column per requirements
+   - Clean, single-page layout with sortable table headers
+   - Recent production history in right panel (last 10 entries)
 
 3. **Enhanced Stock Control**
    - Waste percentage displayed inline with waste quantity
    - Color-coded excessive waste warnings
    - New "Excessive Waste" summary card showing entries exceeding limits
    - Corrected waste calculation: waste / (currentStock + waste + sales) * 100
+
+4. **Stock Entry Duplicate Prevention**
+   - Server-side validation blocks duplicate entries
+   - Checks for existing entry with same date + product + store combination
+   - Returns clear error message: "Entry already exists for this date, product, and store. Please edit the existing entry instead."
+   - Prevents data inconsistencies and duplicates
+
+5. **Delivery Module Auto-Deduction & Store Stock Management**
+   - **Auto-Deduction:** When delivery is confirmed, Production Center inventory automatically deducts the sent quantity
+   - **Insufficient Stock Validation:** Blocks delivery if Production Center doesn't have enough inventory
+   - **Store Stock Updates:** Target store's StockEntry is automatically created/updated with delivered quantity
+   - **Workflow:** Delivery creates/updates stock entry for target store with `delivered` field populated
+   - **Error Handling:** Clear error messages when insufficient inventory available
+   - **Integration:** Seamless connection between Production Center inventory and store-level stock tracking
 
 **Future Enhancement Opportunities**
 - Square API integration for automated sales data import
