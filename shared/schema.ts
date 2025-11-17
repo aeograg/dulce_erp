@@ -56,9 +56,12 @@ export const recipes = pgTable("recipes", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   ingredientId: varchar("ingredient_id").notNull().references(() => ingredients.id, { onDelete: "cascade" }),
   quantity: real("quantity").notNull(),
+  batchYield: real("batch_yield").notNull().default(1),
 });
 
-export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true });
+export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true }).extend({
+  batchYield: z.number().min(0.01, "Batch yield must be at least 0.01"),
+});
 export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
 export type Recipe = typeof recipes.$inferSelect;
 
