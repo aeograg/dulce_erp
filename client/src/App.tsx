@@ -22,6 +22,8 @@ import DeliveryForecast from "@/pages/delivery-forecast";
 import Deliveries from "@/pages/deliveries";
 import StockControl from "@/pages/stock-control";
 import RemainingStock from "@/pages/remaining-stock";
+import ProductionEntry from "@/pages/production-entry";
+import InventoryDashboard from "@/pages/inventory-dashboard";
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -109,6 +111,16 @@ function AuthenticatedApp() {
               <Route path="/remaining-stock">
                 <RequireAuth roles={["Admin", "Manager"]}>
                   <RemainingStock />
+                </RequireAuth>
+              </Route>
+              <Route path="/production-entry">
+                <RequireAuth roles={["Admin", "Manager"]}>
+                  <ProductionEntry />
+                </RequireAuth>
+              </Route>
+              <Route path="/inventory-dashboard">
+                <RequireAuth roles={["Admin", "Manager"]}>
+                  <InventoryDashboard />
                 </RequireAuth>
               </Route>
               <Route component={NotFound} />
