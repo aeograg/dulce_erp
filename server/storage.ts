@@ -226,18 +226,33 @@ export class DatabaseStorage implements IStorage {
     // Get all recipes for this product
     const productRecipes = await this.getRecipesByProduct(productId);
     
-    // Calculate total ingredient cost
-    let totalIngredientCost = 0;
+    if (productRecipes.length === 0) {
+      // No recipes, set cost to 0
+      await db.update(products)
+        .set({ unitCost: 0 })
+        .where(eq(products.id, productId));
+      return;
+    }
+    
+    // Calculate total batch cost from all ingredients
+    let totalBatchCost = 0;
     for (const recipe of productRecipes) {
       const ingredient = await this.getIngredient(recipe.ingredientId);
       if (ingredient) {
-        totalIngredientCost += ingredient.costPerUnit * recipe.quantity;
+        totalBatchCost += ingredient.costPerUnit * recipe.quantity;
       }
     }
     
+    // Get batchYield from first recipe (assuming one recipe configuration per product)
+    // If multiple recipes exist, use the first one's batchYield
+    const batchYield = productRecipes[0].batchYield || 1;
+    
+    // Calculate unit cost: totalBatchCost / batchYield
+    const unitCost = batchYield > 0 ? totalBatchCost / batchYield : 0;
+    
     // Update the product's unit cost
     await db.update(products)
-      .set({ unitCost: totalIngredientCost })
+      .set({ unitCost })
       .where(eq(products.id, productId));
   }
 
