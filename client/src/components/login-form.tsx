@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Wheat } from "lucide-react";
+import dulceLogo from "@assets/dulce logo_1763378119173.jpeg";
 
 interface LoginFormProps {
   onLogin: (username: string, password: string) => void;
@@ -23,11 +23,14 @@ export function LoginForm({ onLogin }: LoginFormProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center justify-center w-12 h-12 rounded-md bg-primary">
-              <Wheat className="w-7 h-7 text-primary-foreground" />
-            </div>
+            <img 
+              src={dulceLogo} 
+              alt="Dulce Bakehouse Logo" 
+              className="w-24 h-24 object-contain"
+              data-testid="img-dulce-logo"
+            />
           </div>
-          <CardTitle className="text-2xl text-center">Bakery ERP</CardTitle>
+          <CardTitle className="text-2xl text-center">Dulce ERP</CardTitle>
           <CardDescription className="text-center">
             Sign in to manage your bakery inventory
           </CardDescription>

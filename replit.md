@@ -1,8 +1,8 @@
-# Bakery ERP System
+# Dulce ERP
 
 ## Overview
 
-A comprehensive bakery ERP web application for managing inventory, multi-store stock tracking, cost calculation, recipe management, and delivery forecasting with role-based access control. Built with modern web technologies, the system serves three user roles (Admin, Manager, Staff) with different permission levels. Features a two-stage stock entry workflow where Staff inputs end-of-day data (current stock, waste) for their assigned store, then Admin/Manager later adds delivered quantities and sales figures. Includes automatic cost calculation from ingredient-only recipes, stock discrepancy detection (>5% threshold), waste tracking, and AI-powered delivery planning based on historical sales data.
+Dulce ERP is a comprehensive bakery management system for managing inventory, multi-store stock tracking, cost calculation, recipe management, and delivery forecasting with role-based access control. Built with modern web technologies, the system serves three user roles (Admin, Manager, Staff) with different permission levels. Features a two-stage stock entry workflow where Staff inputs end-of-day data (current stock, waste) for their assigned store, then Admin/Manager later adds delivered quantities and sales figures. Includes automatic cost calculation from ingredient-only recipes, stock discrepancy detection (>5% threshold), waste tracking, and AI-powered delivery planning based on historical sales data.
 
 ## User Preferences
 
