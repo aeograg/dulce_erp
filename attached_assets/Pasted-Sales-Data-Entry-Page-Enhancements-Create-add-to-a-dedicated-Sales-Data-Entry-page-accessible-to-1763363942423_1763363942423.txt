@@ -1,0 +1,14 @@
+Sales Data Entry Page Enhancements:
+Create/add to a dedicated "Sales Data Entry" page (accessible to Admin/Manager): Include a DataTable (using Bootstrap DataTables for sorting/filtering) showing sales transactions from StockEntry or a related model (columns: date, store_name, product_name, sales_quantity, source e.g., 'Square' or 'Manual').
+Allow manual entry via modal: Form for date, store (dropdown), product (dropdown), sales_quantity (integer). On submit, update the corresponding StockEntry.sales for that date/store/product, then recalc expected_stock (previously expected_remaining) and discrepancy.
+If pulling from Square placeholder, append to the table. Make the table searchable/sortable by columns.
+
+Field Name Changes Across the Project:
+Globally rename 'expected_remaining' to 'expected_stock' in all models (e.g., StockEntry), database columns (update schema if needed, migrate data), routes, templates, calculations, and displays. For example, in calcs: expected_stock = previous_expected + delivered - sales - waste.
+Globally rename 'current_stock' to 'reported_stock' in all models, DB, routes, templates, forms, and displays. This is the staff-input remaining stock; update inputs/labels accordingly (e.g., Staff form now asks for 'reported_stock' instead of 'current_stock').
+Ensure all related calcs update: e.g., reported_remaining (if any) now uses reported_stock; discrepancy = reported_stock - expected_stock (adjust if needed). Search/replace carefully to avoid breaking code.
+
+Fix Delivery Deduction from Inventory:
+Debug and fix the bug where delivered amounts do not deduct from production center inventory. In the Delivery Module, when creating/confirming a delivery (for a product_id, sent_quantity to a store), locate the matching product_id in the InventoryEntry (for Production Center/Store1), subtract sent_quantity from quantity_in_stock.
+Example: If inventory quantity_in_stock = 100 for product_id X, and delivery sent_quantity = 50 for X to Southbank, update to 50. If deduction would make stock negative, block save and flash error (e.g., "Insufficient inventory—produce more first").
+Trigger this auto-deduction on delivery save; log the change. Update any views/dashboards showing inventory to reflect immediately.

@@ -42,6 +42,10 @@ export default function Deliveries() {
     queryKey: ["/api/deliveries"],
   });
 
+  const { data: currentInventory = {}, isLoading: inventoryLoading } = useQuery<Record<string, number>>({
+    queryKey: ["/api/inventory/current"],
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (deliveryData: any[]) => {
       const results = [];
@@ -100,6 +104,23 @@ export default function Deliveries() {
     if (deliveryData.length === 0) {
       toast({
         title: "Please enter at least one product quantity",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate against available inventory
+    const insufficientStock = deliveryData.filter(item => {
+      const available = currentInventory[item.productId] || 0;
+      return item.quantitySent > available;
+    });
+
+    if (insufficientStock.length > 0) {
+      const product = products.find(p => p.id === insufficientStock[0].productId);
+      const available = currentInventory[insufficientStock[0].productId] || 0;
+      toast({
+        title: "Insufficient inventory stock",
+        description: `Cannot send ${insufficientStock[0].quantitySent} units of ${product?.name}. Only ${available} available. Produce more first.`,
         variant: "destructive",
       });
       return;
@@ -194,7 +215,7 @@ export default function Deliveries() {
               <div className="space-y-2">
                 <Label>Product Quantities</Label>
                 <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
-                  {productsLoading ? (
+                  {productsLoading || inventoryLoading ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-6 h-6 animate-spin" />
                     </div>
@@ -203,23 +224,40 @@ export default function Deliveries() {
                       No products available
                     </p>
                   ) : (
-                    products.map((product) => (
-                      <div key={product.id} className="flex items-center gap-4">
-                        <Label className="flex-1 text-sm" htmlFor={`qty-${product.id}`}>
-                          {product.name}
-                        </Label>
-                        <Input
-                          id={`qty-${product.id}`}
-                          type="number"
-                          min="0"
-                          value={productQuantities[product.id] || ""}
-                          onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                          placeholder="0"
-                          className="w-24"
-                          data-testid={`input-quantity-${product.id}`}
-                        />
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
+                        <div>Product</div>
+                        <div className="text-center">Available Stock</div>
+                        <div className="text-center">Quantity to Send</div>
                       </div>
-                    ))
+                      {products.map((product) => {
+                        const availableStock = currentInventory[product.id] || 0;
+                        const requestedQty = productQuantities[product.id] || 0;
+                        const exceedsStock = requestedQty > availableStock;
+                        
+                        return (
+                          <div key={product.id} className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center">
+                            <Label className="text-sm" htmlFor={`qty-${product.id}`}>
+                              {product.name}
+                            </Label>
+                            <div className={`text-center font-semibold ${availableStock === 0 ? 'text-destructive' : 'text-foreground'}`} data-testid={`available-stock-${product.id}`}>
+                              {availableStock}
+                            </div>
+                            <Input
+                              id={`qty-${product.id}`}
+                              type="number"
+                              min="0"
+                              max={availableStock}
+                              value={productQuantities[product.id] || ""}
+                              onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                              placeholder="0"
+                              className={`w-full ${exceedsStock ? 'border-destructive' : ''}`}
+                              data-testid={`input-quantity-${product.id}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
