@@ -32,18 +32,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, Plus, ArrowUpDown, Filter, Package } from "lucide-react";
-import { StockEntryForm } from "@/components/stock-entry-form";
+import { Loader2, Plus, ArrowUpDown, Filter, Package, Pencil } from "lucide-react";
 import type { StockEntry } from "@shared/schema";
 
 type SortField = "date" | "store" | "product" | "reportedStock";
 type SortOrder = "asc" | "desc";
+
+interface EditStockEntryData {
+  date: string;
+  storeId: string;
+  entries: Array<{ id: string; productId: string; reportedStock: number; waste: number }>;
+}
 
 export default function StockEntry() {
   const { toast } = useToast();
   const { user } = useAuth();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState<EditStockEntryData | null>(null);
+  
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [filterStore, setFilterStore] = useState<string>("all");
@@ -64,17 +72,84 @@ export default function StockEntry() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (entry: any) => apiRequest("POST", "/api/stock-entries", entry),
+    mutationFn: async (entries: any[]) => {
+      const results = [];
+      const errors = [];
+      
+      for (const entry of entries) {
+        try {
+          const result = await apiRequest("POST", "/api/stock-entries", entry);
+          results.push(result);
+        } catch (error: any) {
+          // If duplicate detected, switch to edit mode
+          if (error.message?.includes("already exists")) {
+            errors.push({ entry, isDuplicate: true });
+          } else {
+            errors.push({ entry, error: error.message });
+          }
+        }
+      }
+      
+      // If all errors are duplicates, switch to edit mode
+      if (errors.length > 0 && errors.every(e => e.isDuplicate)) {
+        throw new Error("DUPLICATE_DETECTED");
+      }
+      
+      if (errors.length > 0 && !errors.every(e => e.isDuplicate)) {
+        throw new Error(`${errors.length} entries failed to save`);
+      }
+      
+      return results;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/discrepancies"] });
-      toast({ title: "Stock entry recorded successfully" });
+      toast({ title: "Stock entries recorded successfully" });
       setIsModalOpen(false);
+      setEditMode(false);
+      setEditData(null);
+    },
+    onError: (error: any) => {
+      if (error.message === "DUPLICATE_DETECTED") {
+        // Don't close modal, just show message
+        toast({
+          title: "Entry already exists",
+          description: "Switching to edit mode for this date and store",
+          variant: "default",
+        });
+        // The modal stays open and we'll handle switching to edit mode
+      } else {
+        toast({
+          title: "Failed to save stock entries",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (updates: Array<{ id: string; data: any }>) => {
+      const results = [];
+      for (const update of updates) {
+        const result = await apiRequest("PATCH", `/api/stock-entries/${update.id}`, update.data);
+        results.push(result);
+      }
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/discrepancies"] });
+      toast({ title: "Stock entries updated successfully" });
+      setIsModalOpen(false);
+      setEditMode(false);
+      setEditData(null);
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to record stock entry",
+        title: "Failed to update stock entries",
         description: error.message,
         variant: "destructive",
       });
@@ -92,6 +167,32 @@ export default function StockEntry() {
       setSortField(field);
       setSortOrder("asc");
     }
+  };
+
+  const handleEdit = (date: string, storeId: string) => {
+    // Find all entries for this date/store combination
+    const entriesForEdit = stockEntries.filter(
+      e => e.date === date && e.storeId === storeId
+    );
+    
+    setEditData({
+      date,
+      storeId,
+      entries: entriesForEdit.map(e => ({
+        id: e.id,
+        productId: e.productId,
+        reportedStock: e.reportedStock || 0,
+        waste: e.waste || 0,
+      })),
+    });
+    setEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditMode(false);
+    setEditData(null);
+    setIsModalOpen(true);
   };
 
   const storeMap = useMemo(() => new Map(stores.map(s => [s.id, s.name])), [stores]);
@@ -148,6 +249,19 @@ export default function StockEntry() {
     return filtered;
   }, [stockEntries, filterStore, filterProduct, dateFrom, dateTo, sortField, sortOrder, storeMap, productMap]);
 
+  // Group entries by date and store for easy editing
+  const groupedEntries = useMemo(() => {
+    const groups = new Map<string, StockEntry[]>();
+    filteredAndSortedEntries.forEach(entry => {
+      const key = `${entry.date}_${entry.storeId}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(entry);
+    });
+    return groups;
+  }, [filteredAndSortedEntries]);
+
   const totalEntries = filteredAndSortedEntries.length;
   const totalWaste = filteredAndSortedEntries.reduce((sum, entry) => sum + (entry.waste || 0), 0);
   const highDiscrepancies = filteredAndSortedEntries.filter(entry => 
@@ -167,28 +281,10 @@ export default function StockEntry() {
               : "Record daily stock levels and track discrepancies"}
           </p>
         </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-stock-entry">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Stock Entry
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add Daily Stock Entry</DialogTitle>
-              <DialogDescription>
-                Record end-of-day stock levels and waste
-              </DialogDescription>
-            </DialogHeader>
-            <StockEntryForm
-              stores={filteredStores}
-              products={products}
-              onSubmit={(entry) => createMutation.mutate(entry)}
-              userRole={user?.role || "Staff"}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleAddNew} data-testid="button-add-stock-entry">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Stock Entry
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -358,6 +454,7 @@ export default function StockEntry() {
                     <TableHead className="text-right">Sales</TableHead>
                     <TableHead className="text-right">Expected Stock</TableHead>
                     <TableHead className="text-right">Discrepancy</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,6 +480,16 @@ export default function StockEntry() {
                             {discrepancy.toFixed(1)}%
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(entry.date, entry.storeId)}
+                            data-testid={`button-edit-${entry.id}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -392,6 +499,232 @@ export default function StockEntry() {
           )}
         </CardContent>
       </Card>
+
+      <StockEntryModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditMode(false);
+          setEditData(null);
+        }}
+        stores={filteredStores}
+        products={products}
+        editMode={editMode}
+        editData={editData}
+        onSubmit={(entries) => {
+          if (editMode && editData) {
+            // Update mode
+            const updates = entries.map(entry => ({
+              id: entry.id!,
+              data: {
+                reportedStock: entry.reportedStock,
+                waste: entry.waste,
+              }
+            }));
+            updateMutation.mutate(updates);
+          } else {
+            // Create mode
+            const newEntries = entries.map(entry => ({
+              date: entry.date,
+              storeId: entry.storeId,
+              productId: entry.productId,
+              reportedStock: entry.reportedStock,
+              waste: entry.waste,
+            }));
+            createMutation.mutate(newEntries);
+          }
+        }}
+        isPending={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
+  );
+}
+
+interface StockEntryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  stores: any[];
+  products: any[];
+  editMode: boolean;
+  editData: EditStockEntryData | null;
+  onSubmit: (entries: Array<{ id?: string; date: string; storeId: string; productId: string; reportedStock: number; waste: number }>) => void;
+  isPending: boolean;
+}
+
+function StockEntryModal({ isOpen, onClose, stores, products, editMode, editData, onSubmit, isPending }: StockEntryModalProps) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const [date, setDate] = useState(editData?.date || today);
+  const [storeId, setStoreId] = useState(editData?.storeId || "");
+  const [entries, setEntries] = useState<Record<string, { reportedStock: string; waste: string }>>({});
+
+  // Initialize entries when editData changes
+  useState(() => {
+    if (editMode && editData) {
+      setDate(editData.date);
+      setStoreId(editData.storeId);
+      const initialEntries: Record<string, { reportedStock: string; waste: string }> = {};
+      editData.entries.forEach(e => {
+        initialEntries[e.productId] = {
+          reportedStock: e.reportedStock.toString(),
+          waste: e.waste.toString(),
+        };
+      });
+      setEntries(initialEntries);
+    } else {
+      setDate(today);
+      setStoreId("");
+      setEntries({});
+    }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!date || !storeId) {
+      return;
+    }
+
+    const submissionEntries = Object.entries(entries)
+      .filter(([_, val]) => val.reportedStock !== '' || val.waste !== '')
+      .map(([productId, val]) => {
+        const existingEntry = editMode && editData 
+          ? editData.entries.find(e => e.productId === productId)
+          : null;
+        
+        return {
+          id: existingEntry?.id,
+          date,
+          storeId,
+          productId,
+          reportedStock: val.reportedStock === '' ? 0 : Number(val.reportedStock),
+          waste: val.waste === '' ? 0 : Number(val.waste),
+        };
+      });
+
+    if (submissionEntries.length === 0) {
+      return;
+    }
+
+    onSubmit(submissionEntries);
+  };
+
+  const handleEntryChange = (productId: string, field: 'reportedStock' | 'waste', value: string) => {
+    setEntries(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId] || { reportedStock: '', waste: '' },
+        [field]: value,
+      },
+    }));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editMode ? "Edit" : "Add"} Daily Stock Entry</DialogTitle>
+          <DialogDescription>
+            {editMode ? "Update stock levels and waste for this date and store" : "Record end-of-day stock levels and waste"}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="modal-date">Date</Label>
+              <Input
+                id="modal-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                disabled={editMode}
+                required
+                data-testid="input-modal-date"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="modal-store">Store</Label>
+              <Select
+                value={storeId}
+                onValueChange={setStoreId}
+                disabled={editMode}
+                required
+              >
+                <SelectTrigger id="modal-store" data-testid="select-modal-store">
+                  <SelectValue placeholder="Select store" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Current Stock</TableHead>
+                  <TableHead>Waste Quantity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={entries[product.id]?.reportedStock || ''}
+                        onChange={(e) => handleEntryChange(product.id, 'reportedStock', e.target.value)}
+                        data-testid={`input-modal-reported-stock-${product.id}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={entries[product.id]?.waste || ''}
+                        onChange={(e) => handleEntryChange(product.id, 'waste', e.target.value)}
+                        data-testid={`input-modal-waste-${product.id}`}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isPending}
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending}
+              data-testid="button-submit-modal"
+            >
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editMode ? "Update" : "Submit"} Entries
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
