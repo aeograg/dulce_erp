@@ -136,11 +136,11 @@ Preferred communication style: Simple, everyday language.
 **Completed Features**
 - ✅ Simplified product costing model (ingredient costs only, auto-calculated from recipes)
 - ✅ User management with store assignments (Admin-only CRUD operations)
-- ✅ Two-stage stock entry workflow (Staff → Admin/Manager)
-- ✅ Stock update interface for completing pending entries
-- ✅ **NEW: Delivery Module** - Dedicated delivery entry screen for Admin/Manager to record product deliveries to stores
-- ✅ **NEW: Stock Control Module** - Comprehensive stock entry viewer with filters, calculated metrics, and summary statistics
-- ✅ **NEW: Remaining Stock Dashboard** - Real-time stock level monitoring with low stock alerts grouped by store
+- ✅ Two-stage stock entry workflow (Staff enters stock/waste, Admin/Manager enters sales via Sales Data Entry)
+- ✅ **Sales Data Entry Module** - Easy daily sales entry form similar to stock entry, with future Square POS integration
+- ✅ **Delivery Module** - Dedicated delivery entry screen for Admin/Manager to record product deliveries to stores
+- ✅ **Stock Control Module** - Comprehensive stock entry viewer with filters, calculated metrics (including delivered amounts from deliveries), and summary statistics
+- ✅ **Remaining Stock Dashboard** - Real-time stock level monitoring with low stock alerts grouped by store
 - ✅ Delivery forecasting based on historical sales patterns
 - ✅ Role-based access control with store restrictions for Staff
 - ✅ Automatic discrepancy detection and flagging (>5% threshold)
@@ -148,9 +148,19 @@ Preferred communication style: Simple, everyday language.
 - ✅ Multi-store inventory tracking
 - ✅ Dashboard with alerts for low stock and discrepancies
 
-**New Modules (Added Nov 16, 2025)**
+**New Modules (Added Nov 16-17, 2025)**
 
-1. **Delivery Module** (`/deliveries` - Admin/Manager only)
+1. **Sales Data Entry Module** (`/sales-data-entry` - Admin/Manager only) - *Replaces Stock Update*
+   - Form-based daily sales entry with date selector (defaults to today)
+   - Store selector dropdown
+   - Dynamic product list showing all products with quantity input fields
+   - Only allows sales entry for products with existing stock entries for selected date/store
+   - Updates stock_entries table with sales data
+   - Sequential API calls with error handling
+   - Prepared for future Square POS integration
+   - Clear/reset functionality for convenience
+
+2. **Delivery Module** (`/deliveries` - Admin/Manager only)
    - Form-based delivery entry with date selector (defaults to today)
    - Store selector dropdown
    - Dynamic product list with quantity input fields (integer, defaults to 0)
@@ -158,15 +168,15 @@ Preferred communication style: Simple, everyday language.
    - Recent deliveries list showing last 10 entries
    - Batch validation and sequential error handling
 
-2. **Stock Control Module** (`/stock-control` - Admin/Manager only)
+3. **Stock Control Module** (`/stock-control` - Admin/Manager only)
    - Comprehensive table view of all stock entries
-   - Columns: date, store, product, delivered, current stock, waste, sales, expected remaining, discrepancy %
+   - Columns: date, store, product, **delivered (from deliveries module)**, current stock, waste, sales, expected remaining, discrepancy %
    - Filters: date picker and store dropdown
    - Summary statistics cards: total entries, high discrepancies (>=5%), total waste
    - Color-coded discrepancy badges (destructive for >=5%)
    - Loading states and empty state handling
 
-3. **Remaining Stock Dashboard** (`/remaining-stock` - Admin/Manager only)
+4. **Remaining Stock Dashboard** (`/remaining-stock` - Admin/Manager only)
    - Real-time stock level monitoring across all stores
    - Displays latest stock entry per product per store
    - Columns: product, reported remaining (current stock), expected remaining (calculated), min stock level, status
