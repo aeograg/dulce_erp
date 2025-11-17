@@ -44,10 +44,13 @@ export const products = pgTable("products", {
   sellingPrice: real("selling_price").notNull(),
   minStockLevel: integer("min_stock_level").notNull(),
   maxWastePercent: real("max_waste_percent").notNull().default(5.0),
+  batchYield: real("batch_yield").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true });
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true }).extend({
+  batchYield: z.number().min(0.01, "Batch yield must be at least 0.01"),
+});
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
@@ -56,12 +59,9 @@ export const recipes = pgTable("recipes", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   ingredientId: varchar("ingredient_id").notNull().references(() => ingredients.id, { onDelete: "cascade" }),
   quantity: real("quantity").notNull(),
-  batchYield: real("batch_yield").notNull().default(1),
 });
 
-export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true }).extend({
-  batchYield: z.number().min(0.01, "Batch yield must be at least 0.01"),
-});
+export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true });
 export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
 export type Recipe = typeof recipes.$inferSelect;
 

@@ -223,6 +223,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async recalculateProductCost(productId: string): Promise<void> {
+    // Get the product to access its batchYield
+    const product = await this.getProduct(productId);
+    if (!product) return;
+    
     // Get all recipes for this product
     const productRecipes = await this.getRecipesByProduct(productId);
     
@@ -243,9 +247,8 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Get batchYield from first recipe (assuming one recipe configuration per product)
-    // If multiple recipes exist, use the first one's batchYield
-    const batchYield = productRecipes[0].batchYield || 1;
+    // Get batchYield from product (default to 1 to avoid division by zero)
+    const batchYield = product.batchYield || 1;
     
     // Calculate unit cost: totalBatchCost / batchYield
     const unitCost = batchYield > 0 ? totalBatchCost / batchYield : 0;

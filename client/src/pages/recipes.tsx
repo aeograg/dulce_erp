@@ -94,6 +94,9 @@ export default function Recipes() {
     return acc + (ingredient ? ingredient.costPerUnit * recipe.quantity : 0);
   }, 0);
 
+  const batchYield = selectedProduct?.batchYield || 1;
+  const unitCost = batchYield > 0 ? totalIngredientCost / batchYield : 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -132,6 +135,13 @@ export default function Recipes() {
               <CardDescription>Manage ingredients and quantities</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="p-3 bg-muted rounded-md">
+                <div className="text-sm">
+                  <span className="font-medium">Batch Yield: </span>
+                  <span>{batchYield} units per batch</span>
+                  <span className="text-muted-foreground ml-2">(configured in product settings)</span>
+                </div>
+              </div>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2 md:col-span-2">
                   <Label>Ingredient</Label>
@@ -157,7 +167,7 @@ export default function Recipes() {
                     <Input
                       type="number"
                       step="0.01"
-                      min="0"
+                      min="0.01"
                       value={newRecipe.quantity}
                       onChange={(e) => setNewRecipe({ ...newRecipe, quantity: Number(e.target.value) })}
                       placeholder="0.00"
@@ -205,23 +215,29 @@ export default function Recipes() {
                     })}
                   </div>
                   <div className="p-3 bg-muted rounded-md">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">Total Ingredient Cost:</span>
-                      <span className="text-lg font-bold">${totalIngredientCost.toFixed(2)}</span>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total Batch Cost:</span>
+                        <span className="text-lg font-bold">${totalIngredientCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <span>Batch Yield:</span>
+                        <span>{batchYield} units</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="font-semibold">Unit Cost:</span>
+                        <span className="text-lg font-bold">${unitCost.toFixed(2)}</span>
+                      </div>
                     </div>
                     {selectedProduct && (
                       <div className="mt-2 pt-2 border-t text-sm space-y-1">
-                        <div className="flex justify-between font-semibold">
-                          <span>Unit Cost (from recipe):</span>
-                          <span>${totalIngredientCost.toFixed(2)}</span>
-                        </div>
                         <div className="flex justify-between text-muted-foreground">
                           <span>Selling Price:</span>
                           <span>${selectedProduct.sellingPrice.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between text-green-600 dark:text-green-400 font-semibold">
                           <span>Profit per unit:</span>
-                          <span>${(selectedProduct.sellingPrice - totalIngredientCost).toFixed(2)}</span>
+                          <span>${(selectedProduct.sellingPrice - unitCost).toFixed(2)}</span>
                         </div>
                       </div>
                     )}
