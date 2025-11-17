@@ -40,15 +40,7 @@ export default function SalesDataEntry() {
       
       for (const sale of salesData) {
         try {
-          // Create a new stock entry with sales data
-          const result = await apiRequest("POST", "/api/stock-entries", {
-            date: sale.date,
-            storeId: sale.storeId,
-            productId: sale.productId,
-            currentStock: 0,
-            waste: 0,
-            sales: sale.sales,
-          });
+          const result = await apiRequest("POST", "/api/sales", sale);
           results.push(result);
         } catch (error: any) {
           errors.push({ product: sale.productId, error: error.message });
@@ -62,6 +54,7 @@ export default function SalesDataEntry() {
       return results;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/discrepancies"] });
@@ -93,9 +86,10 @@ export default function SalesDataEntry() {
       .filter(([_, quantity]) => quantity > 0)
       .map(([productId, quantity]) => ({
         date: selectedDate,
-        storeId: parseInt(selectedStore),
-        productId: parseInt(productId),
-        sales: quantity,
+        storeId: selectedStore,
+        productId: productId,
+        quantity: quantity,
+        source: "manual",
       }));
 
     if (salesData.length === 0) {
@@ -276,7 +270,7 @@ export default function SalesDataEntry() {
               </div>
               <div>
                 <p className="font-medium text-foreground mb-1">Enter Any Product</p>
-                <p>You can enter sales data for any product. If no stock entry exists, one will be created automatically.</p>
+                <p>Sales data is stored separately and linked to inventory calculations automatically.</p>
               </div>
               <div>
                 <p className="font-medium text-foreground mb-1">Future Integration</p>

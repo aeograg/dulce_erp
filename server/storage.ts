@@ -7,6 +7,7 @@ import {
   recipes, 
   stockEntries,
   deliveries,
+  sales,
   type User,
   type InsertUser,
   type Store,
@@ -21,6 +22,8 @@ import {
   type InsertStockEntry,
   type Delivery,
   type InsertDelivery,
+  type Sale,
+  type InsertSale,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -77,6 +80,13 @@ export interface IStorage {
   createDelivery(delivery: InsertDelivery): Promise<Delivery>;
   updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined>;
   deleteDelivery(id: string): Promise<void>;
+  
+  // Sales
+  getAllSales(): Promise<Sale[]>;
+  getSalesByDate(date: string): Promise<Sale[]>;
+  getSalesByStore(storeId: string): Promise<Sale[]>;
+  getSalesByDateAndStore(date: string, storeId: string): Promise<Sale[]>;
+  createSale(sale: InsertSale): Promise<Sale>;
   
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
@@ -290,6 +300,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDelivery(id: string): Promise<void> {
     await db.delete(deliveries).where(eq(deliveries.id, id));
+  }
+
+  // Sales
+  async getAllSales(): Promise<Sale[]> {
+    return await db.select().from(sales).orderBy(desc(sales.date));
+  }
+
+  async getSalesByDate(date: string): Promise<Sale[]> {
+    return await db.select().from(sales).where(eq(sales.date, date)).orderBy(sales.productId);
+  }
+
+  async getSalesByStore(storeId: string): Promise<Sale[]> {
+    return await db.select().from(sales).where(eq(sales.storeId, storeId)).orderBy(desc(sales.date));
+  }
+
+  async getSalesByDateAndStore(date: string, storeId: string): Promise<Sale[]> {
+    return await db.select().from(sales)
+      .where(and(eq(sales.date, date), eq(sales.storeId, storeId)))
+      .orderBy(sales.productId);
+  }
+
+  async createSale(sale: InsertSale): Promise<Sale> {
+    const result = await db.insert(sales).values(sale).returning();
+    return result[0];
   }
 
   // Analytics

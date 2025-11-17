@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, requireAuth, requireRole } from "./auth";
-import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, recipes } from "@shared/schema";
+import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, recipes } from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
@@ -413,6 +413,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete delivery" });
+    }
+  });
+
+  // Sales Routes
+  app.get("/api/sales", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const allSales = await storage.getAllSales();
+      res.json(allSales);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch sales" });
+    }
+  });
+
+  app.post("/api/sales", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const validatedData = insertSaleSchema.parse(req.body);
+      const sale = await storage.createSale(validatedData);
+      res.status(201).json(sale);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create sale" });
     }
   });
 

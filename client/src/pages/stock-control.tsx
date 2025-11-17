@@ -35,11 +35,15 @@ export default function StockControl() {
     queryKey: ["/api/deliveries"],
   });
 
+  const { data: salesData = [], isLoading: salesLoading } = useQuery<any[]>({
+    queryKey: ["/api/sales"],
+  });
+
   const storeMap = new Map(stores.map((s: any) => [s.id, s.name]));
   const productMap = new Map(products.map((p: any) => [p.id, p.name]));
 
   // Calculate delivered amounts from deliveries data
-  const getDeliveredAmount = (date: string, storeId: number, productId: number) => {
+  const getDeliveredAmount = (date: string, storeId: string, productId: string) => {
     return deliveries
       .filter((d: any) => 
         d.date === date && 
@@ -47,6 +51,17 @@ export default function StockControl() {
         d.productId === productId
       )
       .reduce((sum: number, d: any) => sum + (d.quantitySent || 0), 0);
+  };
+
+  // Calculate sales amounts from sales data
+  const getSalesAmount = (date: string, storeId: string, productId: string) => {
+    return salesData
+      .filter((s: any) => 
+        s.date === date && 
+        s.storeId === storeId && 
+        s.productId === productId
+      )
+      .reduce((sum: number, s: any) => sum + (s.quantity || 0), 0);
   };
 
   const filteredEntries = stockEntries.filter((entry) => {
@@ -60,6 +75,7 @@ export default function StockControl() {
     storeName: storeMap.get(entry.storeId) || "Unknown",
     productName: productMap.get(entry.productId) || "Unknown",
     deliveredAmount: getDeliveredAmount(entry.date, entry.storeId, entry.productId),
+    salesAmount: getSalesAmount(entry.date, entry.storeId, entry.productId),
   }));
 
   const columns = [
@@ -110,12 +126,12 @@ export default function StockControl() {
       ),
     },
     {
-      key: "sales",
+      key: "salesAmount",
       label: "Sales",
       sortable: true,
       render: (item: any) => (
         <span data-testid={`sales-${item.id}`}>
-          {item.sales || 0}
+          {item.salesAmount}
         </span>
       ),
     },
@@ -187,7 +203,7 @@ export default function StockControl() {
         </div>
       </div>
 
-      {isLoading || storesLoading || productsLoading || deliveriesLoading ? (
+      {isLoading || storesLoading || productsLoading || deliveriesLoading || salesLoading ? (
         <Card>
           <CardContent className="py-12">
             <div className="flex items-center justify-center">
