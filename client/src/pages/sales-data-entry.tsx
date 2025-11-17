@@ -162,11 +162,11 @@ export default function SalesDataEntry() {
   const filteredAndSortedSales = useMemo(() => {
     let filtered = [...allSales];
 
-    if (filterStore) {
+    if (filterStore && filterStore !== "all") {
       filtered = filtered.filter(sale => sale.storeId === filterStore);
     }
 
-    if (filterProduct) {
+    if (filterProduct && filterProduct !== "all") {
       filtered = filtered.filter(sale => sale.productId === filterProduct);
     }
 
@@ -422,12 +422,12 @@ export default function SalesDataEntry() {
 
             <div className="space-y-2">
               <Label htmlFor="filter-store">Store</Label>
-              <Select value={filterStore} onValueChange={setFilterStore}>
+              <Select value={filterStore || "all"} onValueChange={setFilterStore}>
                 <SelectTrigger id="filter-store" data-testid="select-filter-store">
                   <SelectValue placeholder="All stores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All stores</SelectItem>
+                  <SelectItem value="all">All stores</SelectItem>
                   {stores.map((store: any) => (
                     <SelectItem key={store.id} value={store.id.toString()}>
                       {store.name}
@@ -439,12 +439,12 @@ export default function SalesDataEntry() {
 
             <div className="space-y-2">
               <Label htmlFor="filter-product">Product</Label>
-              <Select value={filterProduct} onValueChange={setFilterProduct}>
+              <Select value={filterProduct || "all"} onValueChange={setFilterProduct}>
                 <SelectTrigger id="filter-product" data-testid="select-filter-product">
                   <SelectValue placeholder="All products" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All products</SelectItem>
+                  <SelectItem value="all">All products</SelectItem>
                   {products.map((product: any) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name}
@@ -455,14 +455,14 @@ export default function SalesDataEntry() {
             </div>
           </div>
           
-          {(filterStore || filterProduct || dateFrom || dateTo) && (
+          {((filterStore && filterStore !== "all") || (filterProduct && filterProduct !== "all") || dateFrom || dateTo) && (
             <div className="mt-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setFilterStore("");
-                  setFilterProduct("");
+                  setFilterStore("all");
+                  setFilterProduct("all");
                   setDateFrom("");
                   setDateTo("");
                 }}
@@ -481,7 +481,7 @@ export default function SalesDataEntry() {
           <CardTitle>Sales Records</CardTitle>
           <CardDescription>
             {filteredAndSortedSales.length} record{filteredAndSortedSales.length !== 1 ? 's' : ''}
-            {(filterStore || filterProduct || dateFrom || dateTo) && ' (filtered)'}
+            {((filterStore && filterStore !== "all") || (filterProduct && filterProduct !== "all") || dateFrom || dateTo) && ' (filtered)'}
           </CardDescription>
         </CardHeader>
         <CardContent>
