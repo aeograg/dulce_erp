@@ -8,6 +8,7 @@ import {
   stockEntries,
   deliveries,
   sales,
+  inventory,
   type User,
   type InsertUser,
   type Store,
@@ -24,6 +25,8 @@ import {
   type InsertDelivery,
   type Sale,
   type InsertSale,
+  type Inventory,
+  type InsertInventory,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -87,6 +90,14 @@ export interface IStorage {
   getSalesByStore(storeId: string): Promise<Sale[]>;
   getSalesByDateAndStore(date: string, storeId: string): Promise<Sale[]>;
   createSale(sale: InsertSale): Promise<Sale>;
+  
+  // Inventory
+  getAllInventory(): Promise<Inventory[]>;
+  getInventoryByProduct(productId: string): Promise<Inventory[]>;
+  getLatestInventoryByProduct(productId: string): Promise<Inventory | undefined>;
+  getCurrentInventoryLevels(): Promise<Map<string, number>>;
+  recordProduction(entry: InsertInventory): Promise<Inventory>;
+  updateInventoryStock(productId: string, quantity: number, notes?: string): Promise<void>;
   
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
@@ -324,6 +335,70 @@ export class DatabaseStorage implements IStorage {
   async createSale(sale: InsertSale): Promise<Sale> {
     const result = await db.insert(sales).values(sale).returning();
     return result[0];
+  }
+
+  // Inventory
+  async getAllInventory(): Promise<Inventory[]> {
+    return await db.select().from(inventory).orderBy(desc(inventory.date));
+  }
+
+  async getInventoryByProduct(productId: string): Promise<Inventory[]> {
+    return await db.select().from(inventory)
+      .where(eq(inventory.productId, productId))
+      .orderBy(desc(inventory.date));
+  }
+
+  async getLatestInventoryByProduct(productId: string): Promise<Inventory | undefined> {
+    const result = await db.select().from(inventory)
+      .where(eq(inventory.productId, productId))
+      .orderBy(desc(inventory.date))
+      .limit(1);
+    return result[0];
+  }
+
+  async getCurrentInventoryLevels(): Promise<Map<string, number>> {
+    const allProducts = await this.getAllProducts();
+    const inventoryLevels = new Map<string, number>();
+    
+    for (const product of allProducts) {
+      const latestEntry = await this.getLatestInventoryByProduct(product.id);
+      inventoryLevels.set(product.id, latestEntry?.quantityInStock || 0);
+    }
+    
+    return inventoryLevels;
+  }
+
+  async recordProduction(entry: InsertInventory): Promise<Inventory> {
+    const latestEntry = await this.getLatestInventoryByProduct(entry.productId);
+    const currentStock = latestEntry?.quantityInStock || 0;
+    const newStock = currentStock + entry.quantityProduced;
+    
+    const result = await db.insert(inventory).values({
+      ...entry,
+      quantityInStock: newStock,
+    }).returning();
+    
+    return result[0];
+  }
+
+  async updateInventoryStock(productId: string, quantity: number, notes?: string): Promise<void> {
+    const latestEntry = await this.getLatestInventoryByProduct(productId);
+    const currentStock = latestEntry?.quantityInStock || 0;
+    const newStock = currentStock + quantity;
+    
+    if (newStock < 0) {
+      throw new Error(`Insufficient inventory for product ${productId}. Current: ${currentStock}, Requested: ${Math.abs(quantity)}`);
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    await db.insert(inventory).values({
+      date: today,
+      productId,
+      quantityInStock: newStock,
+      quantityProduced: 0,
+      notes: notes || `Inventory adjustment: ${quantity > 0 ? '+' : ''}${quantity}`,
+    });
   }
 
   // Analytics
