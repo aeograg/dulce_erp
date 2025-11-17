@@ -188,19 +188,16 @@ Preferred communication style: Simple, everyday language.
    - Summary cards: total products, low stock alerts, stores monitored
    - Loading states and empty state messaging
 
-5. **Inventory Module** (Added Nov 17, 2025)
-   - **Production Entry** (`/production-entry` - Admin/Manager only)
+5. **Inventory Module** (`/inventory` - Admin/Manager only) (Added Nov 17, 2025)
+   - **Production Entry Section**
      - Form to record daily/weekly production at production center
      - Automatically adds produced quantity to inventory stock
      - Recent production history showing last 10 entries
      - Validation prevents zero or negative production quantities
-   - **Inventory Dashboard** (`/inventory-dashboard` - Admin/Manager only)
-     - Current stock levels for all products at production center
-     - Weekly demand calculation based on last 7 days of sales and deliveries
-     - Suggested production forecast (maintains 2 weeks of stock)
-     - Stock level indicators: Good (2+ weeks), Medium (1-2 weeks), Low (<1 week)
-     - Total inventory value calculation
-     - Low stock alerts for products needing production
+   - **Inventory Stock Levels Section**
+     - Simple table showing current stock levels for all products
+     - Displays product name, current stock, unit cost, and total value
+     - Clean, focused view without forecast calculations
    - **Auto-Deduction Integration**
      - Deliveries automatically deduct from production center inventory
      - Prevents over-delivery with insufficient inventory validation
