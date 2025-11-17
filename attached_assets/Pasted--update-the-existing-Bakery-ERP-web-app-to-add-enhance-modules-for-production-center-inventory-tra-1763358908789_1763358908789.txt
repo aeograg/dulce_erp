@@ -1,0 +1,123 @@
+
+
+update the existing Bakery ERP web app  to add/enhance modules for production center inventory tracking, store stock control with discrepancy/waste monitoring, and delivery recommendations/deductions. Each page should have a dedicated table for data display; perform CRUD operations via Bootstrap modals (for pop-up forms) . Use flash messages for success/errors, and ensure responsive design.
+
+Assume stores: Production Center (Delahey, no deliveries, sells locally), Chico (daily deliveries), Southbank (every 4 days), Port Melbourne everyday.  Forecasting: Simple average daily sales from last 4 weeks of sales data.
+
+
+
+
+
+Inventory Module (Production Center Tracking):
+
+
+
+
+
+Models: Add/Update InventoryEntry (id, date, product_id, quantity_produced, quantity_in_stock - current total after productions/deliveries/sales, notes).
+
+
+
+Treat Production Center as Delahey; link to it automatically.
+
+
+
+Routes/Page: Admin/Manager-accessible page with table showing current inventory (product_name, quantity_in_stock, last_updated_date). Use tabs: "Current Inventory" (table), "Production History" (table of past entries).
+
+
+
+CRUD: Modal for "Add Production" (date default today, product dropdown, quantity_produced - adds to quantity_in_stock). Edit/delete via modals on table rows.
+
+
+
+Auto-updates: When production added, increase quantity_in_stock. Deduct for deliveries (integrate with Delivery Module) or local sales (pull from Square for Store1).
+
+
+
+Weekly Needs Calc: In dashboard tab, show suggested weekly production per product = (sum of all stores' forecasted weekly needs + Store1 local forecast) - current_quantity_in_stock. Forecast = avg daily sales * 7.
+
+
+
+Stock Control Module (Store Stock Tracking with Discrepancies/Waste):
+
+
+
+
+
+Use/Enhance StockEntry model (id, date, product_id, store_id, delivered, current_stock (staff-reported remaining), waste, sales (from Square/manual), expected_remaining, reported_remaining, discrepancy).
+
+
+
+Routes/Page: Admin/Manager page with table: date, store_name, product_name, delivered, current_stock, waste, sales, expected_remaining (calc: previous_expected + delivered - sales - waste; fetch prev from prior date), reported_remaining (current_stock - sales - waste? Wait, clarify if reported is just current_stock or adjusted), discrepancy (reported_remaining - expected_remaining).
+
+
+
+Filters: Dropdown for store, date range (use forms).
+
+
+
+Staff Input: End-of-day form (modal/tab) for their store only: date, product, current_stock, waste (validate <= product-specific max_waste_percent from Product model).
+
+
+
+On save/update: Auto-calc fields. Highlight rows if |discrepancy| > 0 (red for potential issues) or waste > max_waste_percent (warn: "Exceeds limit - reduce production or alert staff").
+
+
+
+Add to Product model: max_waste_percent (float, e.g., 5.0 for bread).
+
+
+
+Integration: Placeholder route for pulling Square sales (update sales field, recalc).
+
+
+
+Delivery Module (Recommendations and Deductions):
+
+
+
+
+
+Models: Use/Enhance Delivery (id, date, store_id, product_id, recommended_quantity, sent_quantity - deducts from production inventory).
+
+
+
+Routes/Page: Admin/Manager page with table: date, store_name, product_name, recommended_quantity, sent_quantity.
+
+
+
+Recommendation Calc: Button/modal to generate plan (select store/date): For each product, recommended = (forecasted_sales_for_period + min_stock_level - current_stock_at_store); period = 1 day for Store2, 4 days for Store3. Forecast = avg daily sales from history * period_days.
+
+
+
+CRUD: Modal to confirm/edit sent_quantity (updates Delivery, deducts from InventoryEntry.quantity_in_stock at production center; alert if insufficient stock).
+
+
+
+Update StockEntry.delivered = sent_quantity for target store/date.
+
+Overall:
+
+
+
+
+
+Dashboard: Central page for Admin/Manager with overview: Low inventory alerts, recent discrepancies/waste exceeds, upcoming delivery recommendations.
+
+
+
+Workflow: Produce (update inventory) → Recommend/Confirm Delivery (deduct inventory, set delivered) → Staff Inputs (current_stock/waste) → Pull Sales → Calc Discrepancies/Waste Checks.
+
+
+
+Security/Validation: Role decorators, input validation (non-negative numbers, waste caps).
+
+
+
+Testing: Seed sample data (3 stores, 5 products, mock entries). Debug integrations.
+
+
+
+Comments in code. After build, provide full updated code, Replit run guide, and hosting export steps (e.g., requirements.txt).
+
+If unclear (e.g., exact reported_remaining calc, waste % examples per product, or how local sales deduct from production inventory), ask for clarification.
