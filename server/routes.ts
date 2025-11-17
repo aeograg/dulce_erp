@@ -387,6 +387,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/deliveries", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const deliveryData = insertDeliverySchema.parse(req.body);
+      
+      // Auto-deduct from inventory when delivery is sent
+      try {
+        await storage.updateInventoryStock(
+          deliveryData.productId,
+          -deliveryData.quantitySent,
+          `Delivery to store ${deliveryData.storeId}`
+        );
+      } catch (inventoryError: any) {
+        return res.status(400).json({ 
+          error: `Inventory error: ${inventoryError.message}` 
+        });
+      }
+      
       const delivery = await storage.createDelivery(deliveryData);
       res.status(201).json(delivery);
     } catch (error: any) {
