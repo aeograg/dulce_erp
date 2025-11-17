@@ -235,7 +235,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(recipes.ingredientId, ingredientId));
     
     // Return unique product IDs
-    return [...new Set(recipeList.map(r => r.productId))];
+    return Array.from(new Set(recipeList.map(r => r.productId)));
   }
 
   // Stock Entries

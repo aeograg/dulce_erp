@@ -1,0 +1,20 @@
+Build a new module in the existing Bakery ERP Flask app called "Inventory Module" for managing the production center's inventory. The production center is the main location where all products are manufactured, frozen, and stored before being sent to other stores (via the Delivery Module) or used/sold directly in the production center's own shop (which also sells products). This module tracks the total stock levels of finished products at the production center to help determine weekly production needs (e.g., by comparing current inventory against forecasted demands from stores and local sales).
+Implement as follows, keeping it simple, integrated with existing models (e.g., Product, Store - treat production center as Store1 or a special 'Production Center' entry if not already), and mobile-friendly with Bootstrap UI:
+
+Models Updates/Additions:
+Add an InventoryEntry model (id, date, product_id, quantity_in_stock - current frozen/ready stock, notes optional).
+Link to Product model for details.
+Auto-update inventory: When deliveries are sent (from Delivery Module), subtract quantity_sent from production center's inventory. When production is recorded (new feature below), add to inventory.
+
+Routes and Features:
+Admin/Manager route: Form to record daily/weekly production (date, product dropdown, quantity_produced - adds to inventory stock).
+View page: Table showing current inventory levels per product (latest quantity_in_stock), with history filter by date.
+Auto-calculate weekly production needs: On a dashboard section, show suggested production = (total forecasted needs from all stores' delivery plans + local shop forecast) - current_inventory. Use average sales from StockEntry/Stock Control data for forecasts.
+Integration: When confirming a delivery in Delivery Module, deduct from this inventory. Alert if inventory would go negative.
+
+UI and Reports:
+Simple table/dashboard: Product, current_stock, weekly_suggested_production (calculated).
+Ensure filters by product/date; highlights for low stock (below a configurable threshold, e.g., 20% of weekly needs).
+
+
+Test integration with existing modules (e.g., after delivery, inventory updates). Use comments in code. If unclear (e.g., how to handle local shop sales subtraction from inventory), ask for clarification. After building, provide updated code and run guide.

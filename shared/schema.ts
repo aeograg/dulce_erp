@@ -107,3 +107,17 @@ export const sales = pgTable("sales", {
 export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, createdAt: true });
 export type InsertSale = z.infer<typeof insertSaleSchema>;
 export type Sale = typeof sales.$inferSelect;
+
+export const inventory = pgTable("inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: date("date").notNull(),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  quantityInStock: integer("quantity_in_stock").notNull().default(0),
+  quantityProduced: integer("quantity_produced").notNull().default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true, createdAt: true });
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
