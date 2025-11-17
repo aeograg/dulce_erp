@@ -19,6 +19,7 @@ interface Product {
   unitCost: number;
   sellingPrice: number;
   minStockLevel: number;
+  maxWastePercent: number;
 }
 interface ProductFormProps {
   product?: Product;
@@ -33,6 +34,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
     unitCost: product ? String(product.unitCost) : "",
     sellingPrice: product ? String(product.sellingPrice) : "",
     minStockLevel: product ? String(product.minStockLevel) : "",
+    maxWastePercent: product ? String(product.maxWastePercent) : "5.0",
   });
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -44,6 +46,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
       unitCost: formData.unitCost === '' ? 0 : Number(formData.unitCost),
       sellingPrice: formData.sellingPrice === '' ? 0 : Number(formData.sellingPrice),
       minStockLevel: formData.minStockLevel === '' ? 0 : Number(formData.minStockLevel),
+      maxWastePercent: formData.maxWastePercent === '' ? 5.0 : Number(formData.maxWastePercent),
     };
     if (product?.id) {
       submittedData.id = product.id;
@@ -57,6 +60,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
         unitCost: "",
         sellingPrice: "",
         minStockLevel: "",
+        maxWastePercent: "5.0",
       });
     }
   };
@@ -130,17 +134,34 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="minStockLevel">Min Stock Level</Label>
-              <Input
-                id="minStockLevel"
-                type="number"
-                min="0"
-                value={formData.minStockLevel}
-                onChange={(e) => handleChange("minStockLevel", e.target.value)}
-                required
-                data-testid="input-min-stock"
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="minStockLevel">Min Stock Level</Label>
+                <Input
+                  id="minStockLevel"
+                  type="number"
+                  min="0"
+                  value={formData.minStockLevel}
+                  onChange={(e) => handleChange("minStockLevel", e.target.value)}
+                  required
+                  data-testid="input-min-stock"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxWastePercent">Max Waste % (Acceptable Waste)</Label>
+                <Input
+                  id="maxWastePercent"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={formData.maxWastePercent}
+                  onChange={(e) => handleChange("maxWastePercent", e.target.value)}
+                  placeholder="5.0"
+                  required
+                  data-testid="input-max-waste-percent"
+                />
+              </div>
             </div>
             <div className="p-4 bg-muted rounded-md">
               <p className="text-sm font-medium">Profit Margin: {profitMargin.toFixed(2)}%</p>

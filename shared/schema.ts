@@ -43,6 +43,7 @@ export const products = pgTable("products", {
   unitCost: real("unit_cost").notNull().default(0),
   sellingPrice: real("selling_price").notNull(),
   minStockLevel: integer("min_stock_level").notNull(),
+  maxWastePercent: real("max_waste_percent").notNull().default(5.0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

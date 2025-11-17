@@ -207,10 +207,35 @@ Preferred communication style: Simple, everyday language.
      - Cumulative stock tracking (each entry shows total available inventory)
      - Production center uses first store or dedicated production center entry
 
+**Recent Enhancements (Nov 17, 2025)**
+
+1. **Waste Management System**
+   - Added `maxWastePercent` field to Product model (default 5.0%)
+   - Stock Entry form shows real-time waste percentage calculation with visual warnings
+   - Stock Control displays waste percentage and highlights excessive waste (red text, summary card)
+   - Color-coded validation: red background for rows exceeding waste limits
+   - Warning badges on entries that exceed product-specific waste thresholds
+
+2. **Inventory Page Reorganization (Tabbed Interface)**
+   - Tab 1: **Production Entry** - Record daily/weekly production with recent history
+   - Tab 2: **Current Inventory** - Simple stock levels table (product, stock, unit cost, value)
+   - Tab 3: **Weekly Needs** - Production forecasting and recommendations
+     - 7-day average demand calculation (sales + deliveries)
+     - Target stock: 2 weeks of demand
+     - Suggested production: target - current stock
+     - Status indicators: Good (2+ weeks), Medium (1-2 weeks), Low (<1 week)
+     - Summary cards: total products, low stock alerts, total inventory value
+
+3. **Enhanced Stock Control**
+   - Waste percentage displayed inline with waste quantity
+   - Color-coded excessive waste warnings
+   - New "Excessive Waste" summary card showing entries exceeding limits
+   - Corrected waste calculation: waste / (currentStock + waste + sales) * 100
+
 **Future Enhancement Opportunities**
 - Square API integration for automated sales data import
 - Advanced reporting with custom date ranges and export functionality
 - Email notifications for critical alerts (low stock, high discrepancies)
 - Mobile-optimized interface for field staff
 - Batch stock entry for multiple products at once
-- Integration between Delivery Module and Stock Entry (auto-populate delivered quantities)
+- Stock Control page tabs: Stock Entries, Staff Input, Discrepancy Report (consolidate views)

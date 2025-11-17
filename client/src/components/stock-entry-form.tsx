@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,7 +31,7 @@ interface StockEntry {
 
 interface StockEntryFormProps {
   stores: Array<{ id: string; name: string }>;
-  products: Array<{ id: string; name: string }>;
+  products: Array<{ id: string; name: string; maxWastePercent?: number }>;
   onSubmit: (entry: StockEntry) => void;
   userRole: string;
 }
@@ -62,6 +64,35 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
         [field]: value,
       },
     }));
+  };
+
+  const calculateWastePercent = (productId: string) => {
+    const entry = entries[productId];
+    if (!entry) return 0;
+    
+    const waste = Number(entry.waste) || 0;
+    if (waste === 0) return 0;
+    
+    const currentStock = Number(entry.currentStock) || 0;
+    // Total inventory for the day = current stock + waste
+    // (assuming no sales data at stock entry time)
+    const totalInventory = waste + currentStock;
+    
+    if (totalInventory === 0) return 0;
+    return (waste / totalInventory) * 100;
+  };
+
+  const isWasteExcessive = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product || product.maxWastePercent === undefined) return false;
+    
+    const entry = entries[productId];
+    const waste = Number(entry?.waste) || 0;
+    
+    // At entry time, we don't have full data (delivered/sales) so we show a warning
+    // if waste seems high relative to current stock, but this is just informational
+    const wastePercent = calculateWastePercent(productId);
+    return waste > 0 && wastePercent > product.maxWastePercent;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,34 +179,57 @@ export function StockEntryForm({ stores, products, onSubmit, userRole }: StockEn
                   <TableHead>Product</TableHead>
                   <TableHead>Current Stock (End of Day)</TableHead>
                   <TableHead>Waste Quantity</TableHead>
+                  <TableHead>Waste %</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={entries[product.id]?.currentStock || ''}
-                        onChange={(e) => handleEntryChange(product.id, 'currentStock', e.target.value)}
-                        data-testid={`input-current-stock-${product.id}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={entries[product.id]?.waste || ''}
-                        onChange={(e) => handleEntryChange(product.id, 'waste', e.target.value)}
-                        data-testid={`input-waste-${product.id}`}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {products.map((product) => {
+                  const wastePercent = calculateWastePercent(product.id);
+                  const excessive = isWasteExcessive(product.id);
+                  const hasData = (entries[product.id]?.waste || '') !== '';
+                  
+                  return (
+                    <TableRow key={product.id} className={excessive ? "bg-destructive/10" : ""}>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={entries[product.id]?.currentStock || ''}
+                          onChange={(e) => handleEntryChange(product.id, 'currentStock', e.target.value)}
+                          data-testid={`input-current-stock-${product.id}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={entries[product.id]?.waste || ''}
+                          onChange={(e) => handleEntryChange(product.id, 'waste', e.target.value)}
+                          className={excessive ? "border-destructive" : ""}
+                          data-testid={`input-waste-${product.id}`}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {hasData && (
+                          <div className="flex items-center gap-2">
+                            <span className={excessive ? "text-destructive font-semibold" : ""}>
+                              {wastePercent.toFixed(1)}%
+                            </span>
+                            {excessive && (
+                              <Badge variant="destructive" className="text-xs gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Check: Limit {product.maxWastePercent}%
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

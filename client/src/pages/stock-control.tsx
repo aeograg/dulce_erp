@@ -70,13 +70,30 @@ export default function StockControl() {
     return true;
   });
 
-  const enrichedEntries = filteredEntries.map((entry) => ({
-    ...entry,
-    storeName: storeMap.get(entry.storeId) || "Unknown",
-    productName: productMap.get(entry.productId) || "Unknown",
-    deliveredAmount: getDeliveredAmount(entry.date, entry.storeId, entry.productId),
-    salesAmount: getSalesAmount(entry.date, entry.storeId, entry.productId),
-  }));
+  const enrichedEntries = filteredEntries.map((entry) => {
+    const product = products.find((p: any) => p.id === entry.productId);
+    const deliveredAmount = getDeliveredAmount(entry.date, entry.storeId, entry.productId);
+    const salesAmount = getSalesAmount(entry.date, entry.storeId, entry.productId);
+    
+    // Total inventory = current stock + waste + sales (what we had during the day)
+    const totalDayInventory = (entry.currentStock || 0) + (entry.waste || 0) + salesAmount;
+    
+    // Calculate waste percentage based on total inventory available
+    const wastePercent = totalDayInventory > 0 ? ((entry.waste || 0) / totalDayInventory) * 100 : 0;
+    const maxWastePercent = product?.maxWastePercent || 5.0;
+    const isWasteExcessive = (entry.waste || 0) > 0 && wastePercent > maxWastePercent;
+
+    return {
+      ...entry,
+      storeName: storeMap.get(entry.storeId) || "Unknown",
+      productName: productMap.get(entry.productId) || "Unknown",
+      deliveredAmount,
+      salesAmount,
+      wastePercent,
+      maxWastePercent,
+      isWasteExcessive,
+    };
+  });
 
   const columns = [
     {
@@ -120,9 +137,16 @@ export default function StockControl() {
       label: "Waste",
       sortable: true,
       render: (item: any) => (
-        <span className={item.waste > 0 ? "text-destructive" : ""} data-testid={`waste-${item.id}`}>
-          {item.waste || 0}
-        </span>
+        <div className="flex flex-col">
+          <span className={item.isWasteExcessive ? "text-destructive font-semibold" : item.waste > 0 ? "text-destructive" : ""} data-testid={`waste-${item.id}`}>
+            {item.waste || 0}
+          </span>
+          {item.waste > 0 && (
+            <span className={`text-xs ${item.isWasteExcessive ? "text-destructive" : "text-muted-foreground"}`}>
+              {item.wastePercent.toFixed(1)}%
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -264,13 +288,16 @@ export default function StockControl() {
             
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Waste</CardTitle>
-                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Excessive Waste</CardTitle>
+                <Trash2 className="h-4 w-4 text-destructive" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="stat-total-waste">
-                  {filteredEntries.reduce((sum, e) => sum + (e.waste || 0), 0)} units
+                <div className="text-2xl font-bold text-destructive" data-testid="stat-excessive-waste">
+                  {enrichedEntries.filter(e => e.isWasteExcessive).length}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entries exceeding limit
+                </p>
               </CardContent>
             </Card>
           </div>
