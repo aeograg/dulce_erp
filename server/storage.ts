@@ -73,6 +73,7 @@ export interface IStorage {
   getStockEntriesByStore(storeId: string): Promise<StockEntry[]>;
   getStockEntriesByProduct(productId: string): Promise<StockEntry[]>;
   getLatestStockEntry(productId: string, storeId: string): Promise<StockEntry | undefined>;
+  getStockEntryByDateProductStore(date: string, productId: string, storeId: string): Promise<StockEntry | undefined>;
   createStockEntry(entry: InsertStockEntry): Promise<StockEntry>;
   updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined>;
   
@@ -276,6 +277,19 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getStockEntryByDateProductStore(date: string, productId: string, storeId: string): Promise<StockEntry | undefined> {
+    const result = await db
+      .select()
+      .from(stockEntries)
+      .where(and(
+        eq(stockEntries.date, date),
+        eq(stockEntries.productId, productId),
+        eq(stockEntries.storeId, storeId)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
   async createStockEntry(entry: InsertStockEntry): Promise<StockEntry> {
     const result = await db.insert(stockEntries).values(entry).returning();
     return result[0];
@@ -371,10 +385,12 @@ export class DatabaseStorage implements IStorage {
   async recordProduction(entry: InsertInventory): Promise<Inventory> {
     const latestEntry = await this.getLatestInventoryByProduct(entry.productId);
     const currentStock = latestEntry?.quantityInStock || 0;
-    const newStock = currentStock + entry.quantityProduced;
+    const quantityProduced = entry.quantityProduced || 0;
+    const newStock = currentStock + quantityProduced;
     
     const result = await db.insert(inventory).values({
       ...entry,
+      quantityProduced,
       quantityInStock: newStock,
     }).returning();
     

@@ -306,6 +306,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const entryData = insertStockEntrySchema.parse(req.body);
       
+      // Check for duplicate entry (same date, product, store)
+      const existingEntry = await storage.getStockEntryByDateProductStore(
+        entryData.date,
+        entryData.productId,
+        entryData.storeId
+      );
+      
+      if (existingEntry) {
+        return res.status(400).json({ 
+          error: "Entry already exists for this date, product, and store. Please edit the existing entry instead."
+        });
+      }
+      
       // Get previous stock entry for calculations
       const prevEntry = await storage.getLatestStockEntry(entryData.productId, entryData.storeId);
       const previousExpected = prevEntry?.expectedRemaining || 0;
@@ -400,6 +413,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (inventoryError: any) {
           return res.status(400).json({ 
             error: `Inventory error: ${inventoryError.message}` 
+          });
+        }
+        
+        // Update target store's stock entry with delivered quantity
+        // Check if stock entry exists for this date/product/store
+        const existingStockEntry = await storage.getStockEntryByDateProductStore(
+          deliveryData.date,
+          deliveryData.productId,
+          deliveryData.storeId
+        );
+        
+        if (existingStockEntry) {
+          // Update existing entry's delivered field
+          await storage.updateStockEntry(existingStockEntry.id, {
+            delivered: (existingStockEntry.delivered || 0) + quantitySent
+          });
+        } else {
+          // Create new stock entry with delivered quantity
+          await storage.createStockEntry({
+            date: deliveryData.date,
+            storeId: deliveryData.storeId,
+            productId: deliveryData.productId,
+            currentStock: 0,
+            waste: 0,
+            sales: 0,
+            delivered: quantitySent,
+            expectedRemaining: quantitySent,
+            reportedRemaining: 0,
+            discrepancy: 0,
           });
         }
       }

@@ -1,0 +1,25 @@
+Focus on the Inventory Module, Stock Entry, Delivery Module, and store-specific stock management. Ensure all updates integrate seamlessly with existing models (e.g., Product, Store, StockEntry, InventoryEntry, Delivery), roles (Admin/Manager for edits/views, Staff for inputs), and UI (simple, mobile-friendly with Bootstrap tables/forms/modals). Use modals for CRUD where possible to keep pages clean. Add validations, flash messages for errors/success, and recalculations as needed. Test each change with sample data (e.g., products like Croissant, Danish; stores like Production Center, Southbank).
+
+Inventory Module Updates:
+On the main Inventory page (for Admin/Manager), remove the tabs structure. Instead, place the "Current Inventory" table directly below the production entry form/section—no separate tab.
+In the Current Inventory table (showing product_name, quantity_in_stock, last_updated_date, etc.), delete the unit_cost column entirely (remove from table display and any queries).
+Add sorting mechanism to the table: Make columns sortable (e.g., by product_name ascending/descending, quantity_in_stock high-to-low) using clickable headers. Implement server-side sorting via query parameters or client-side with Bootstrap DataTables if simple.
+
+Block Duplication in Stock Entry:
+In the Stock Entry module (for Staff inputs or Admin/Manager updates), prevent duplicate entries: Before saving a new entry, check if an entry already exists for the same date, product_id, and store_id. If yes, block creation and show error (e.g., flash "Entry exists—edit instead"). Allow editing of existing entries via modal on the table row.
+For Staff, limit to their store; for Admin/Manager, allow all.
+
+Deduct Inventory on Delivery:
+In the Delivery Module, when confirming/saving a delivery (sent_quantity for a product to a store), automatically deduct that quantity from the Production Center's (Store1) current InventoryEntry.quantity_in_stock for that product.
+Example: If inventory has 250 units of a product, and delivery sends 150 to Southbank, update inventory to 100. If insufficient stock, block save and alert (e.g., flash "Not enough stock—produce more first").
+Recalculate and save the new quantity_in_stock; log the change.
+
+Store-Specific Stock Management After Delivery:
+Ensure every store (including Production Center as Store1) has its own independent stock levels. Use the existing StockEntry model to track per-store stock (already has store_id)—enhance it to update 'delivered' or a new 'initial_stock' field when delivery happens.
+Workflow: When a delivery is confirmed/sent, add/update the target store's StockEntry for that date/product: Set delivered = sent_quantity (which becomes the store's starting stock for the period). Deduct from Production Center's inventory as above.
+Example: Send 100 Danishes to Southbank—deduct 100 from Production Center inventory; create/update Southbank's StockEntry with delivered=100 (now in Southbank's stock). Staff later inputs end-of-day current_stock/waste for their store.
+If needed, add a StoreStockSummary view (new page or section) showing aggregated current stock per store/product (from latest StockEntry.expected_remaining or reported_remaining).
+Efficiency: Reuse StockEntry for store stocks (no new table unless overload—check queries); it already supports per-store tracking.
+
+
+After updates, provide full revised code snippets for affected files (e.g., views.py, models.py, templates), test with examples, and guide on running/debugging in Replit. If unclear (e.g., exact fields in StockEntry for 'initial_stock', or how to handle multi-day periods for every-4-days stores), ask for clarification.
