@@ -386,8 +386,11 @@ export class DatabaseStorage implements IStorage {
     const currentStock = latestEntry?.quantityInStock || 0;
     const newStock = currentStock + quantity;
     
+    // Prevent negative inventory
     if (newStock < 0) {
-      throw new Error(`Insufficient inventory for product ${productId}. Current: ${currentStock}, Requested: ${Math.abs(quantity)}`);
+      const product = await this.getProduct(productId);
+      const productName = product?.name || productId;
+      throw new Error(`Insufficient inventory for ${productName}. Available: ${currentStock}, Requested: ${Math.abs(quantity)}`);
     }
     
     const today = new Date().toISOString().split('T')[0];

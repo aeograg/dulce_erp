@@ -389,16 +389,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deliveryData = insertDeliverySchema.parse(req.body);
       
       // Auto-deduct from inventory when delivery is sent
-      try {
-        await storage.updateInventoryStock(
-          deliveryData.productId,
-          -deliveryData.quantitySent,
-          `Delivery to store ${deliveryData.storeId}`
-        );
-      } catch (inventoryError: any) {
-        return res.status(400).json({ 
-          error: `Inventory error: ${inventoryError.message}` 
-        });
+      const quantitySent = deliveryData.quantitySent || 0;
+      if (quantitySent > 0) {
+        try {
+          await storage.updateInventoryStock(
+            deliveryData.productId,
+            -quantitySent,
+            `Delivery to store ${deliveryData.storeId}`
+          );
+        } catch (inventoryError: any) {
+          return res.status(400).json({ 
+            error: `Inventory error: ${inventoryError.message}` 
+          });
+        }
       }
       
       const delivery = await storage.createDelivery(deliveryData);

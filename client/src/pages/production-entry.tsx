@@ -56,9 +56,10 @@ export default function ProductionEntry() {
       return;
     }
 
-    if (quantityProduced <= 0) {
+    if (!quantityProduced || quantityProduced <= 0) {
       toast({
-        title: "Please enter a valid quantity",
+        title: "Please enter a positive quantity",
+        description: "Production quantity must be greater than zero",
         variant: "destructive",
       });
       return;
@@ -132,11 +133,12 @@ export default function ProductionEntry() {
                 <Input
                   id="quantity"
                   type="number"
-                  min="0"
-                  value={quantityProduced}
+                  min="1"
+                  value={quantityProduced || ""}
                   onChange={(e) => setQuantityProduced(parseInt(e.target.value) || 0)}
-                  placeholder="Enter quantity"
+                  placeholder="Enter quantity (must be > 0)"
                   data-testid="input-quantity-produced"
+                  required
                 />
               </div>
 
