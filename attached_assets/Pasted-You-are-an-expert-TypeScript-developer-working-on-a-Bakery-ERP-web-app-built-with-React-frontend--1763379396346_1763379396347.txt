@@ -1,0 +1,33 @@
+You are an expert TypeScript developer working on a Bakery ERP web app built with React (frontend), Express.js (backend), PostgreSQL via Drizzle ORM, and TanStack Query for state management. The project has the following architecture:
+
+Database Schema (relevant tables):
+stores: id, name, deliverySchedule (e.g., 'daily', 'every-2-days').
+products: id, name, unitCost, sellingPrice, minStockLevel, maxWastePercent.
+stock_entries: id, date (string, YYYY-MM-DD), storeId (references stores), productId (references products), delivered (number, default 0), currentStock (number), waste (number), sales (number), expectedRemaining (number, currently wrong—needs fix), discrepancyPercent (number, currently wrong—needs fix).
+deliveries: id, date, storeId, productId, quantitySent.
+sales: id, date, storeId, productId, quantity, unitPrice.
+inventory: For production center only (no storeId yet)—tracks quantityInStock, quantityProduced.
+
+Backend Files:
+src/storage/postgres.ts: Implements IStorage interface with Drizzle ORM queries (e.g., getStockEntries, updateStockEntry).
+src/routes/stockEntries.ts: API routes for /api/stock-entries (GET for list, POST/PUT for updates).
+src/routes/deliveries.ts and src/routes/sales.ts: Handle updates to stock_entries.delivered and .sales via mutations.
+
+Frontend Files:
+src/pages/StockControl.tsx: Displays table with columns: date, store, product, delivered, currentStock, waste, sales, expectedRemaining, discrepancy % (uses useQuery for /api/stock-entries).
+src/pages/RemainingStock.tsx: Similar, shows latest per store/product with reported/expected remaining.
+
+
+Current Issue: In Stock Control, expectedRemaining is wrongly calculated (likely just delivered - sales - waste, ignoring carryover). Fix to: expectedRemaining = (previous day's currentStock for same store/product + delivered) - sales - waste. Discrepancy % = ((currentStock - expectedRemaining) / (previousCurrentStock + delivered || 1)) * 100, flag if abs >5%.
+Implement the minimal fix without schema changes: Dynamically compute previousCurrentStock from historical stock_entries when fetching for Stock Control/Remaining Stock.
+Steps to Implement:
+
+In backend (postgres.ts): Update getStockEntries (or add getEnrichedStockEntries) to fetch raw entries, then for each entry, query previousCurrentStock = SELECT currentStock FROM stock_entries WHERE storeId = [entry.storeId] AND productId = [entry.productId] AND date < [entry.date] ORDER BY date DESC LIMIT 1; (default 0 if none). Compute expectedRemaining and discrepancyPercent as above. Return enriched array with added fields: previousCurrentStock, expectedRemaining, discrepancyPercent.
+In routes/stockEntries.ts: Update GET /api/stock-entries to use the enriched method. Support query params for filters (date, storeId). Ensure role middleware (Admin/Manager only).
+In frontend StockControl.tsx: Update useQuery to fetch from /api/stock-entries (enriched). Display updated expectedRemaining and discrepancy % in table. Keep color-coding (e.g., destructive for discrepancy >=5%).
+In RemainingStock.tsx: Similarly, update useQuery to fetch enriched data (or add separate API if needed). For "expected remaining", use latest entry's expectedRemaining.
+
+Add error handling (e.g., divide-by-zero). Use transactions if needed. Generate code diffs or full updated files. Test with sample data: e.g., Day1: currentStock=10; Day2: delivered=20, sales=5, waste=2 → expected= (10+20)-5-2=23.
+Output: Provide updated code for affected files (full code or diffs).
+
+This prompt should guide Replit AI to generate the necessary code changes accurately. If it needs more context, you can iterate by providing feedback in Replit. Let me know if you want me to refine this prompt or implement parts of it directly!

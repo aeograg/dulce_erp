@@ -73,6 +73,7 @@ export interface IStorage {
   getStockEntriesByStore(storeId: string): Promise<StockEntry[]>;
   getStockEntriesByProduct(productId: string): Promise<StockEntry[]>;
   getLatestStockEntry(productId: string, storeId: string): Promise<StockEntry | undefined>;
+  getPreviousStockEntry(date: string, productId: string, storeId: string): Promise<StockEntry | undefined>;
   getStockEntryByDateProductStore(date: string, productId: string, storeId: string): Promise<StockEntry | undefined>;
   createStockEntry(entry: InsertStockEntry): Promise<StockEntry>;
   updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined>;
@@ -272,6 +273,20 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(stockEntries)
       .where(and(eq(stockEntries.productId, productId), eq(stockEntries.storeId, storeId)))
+      .orderBy(desc(stockEntries.date))
+      .limit(1);
+    return result[0];
+  }
+
+  async getPreviousStockEntry(date: string, productId: string, storeId: string): Promise<StockEntry | undefined> {
+    const result = await db
+      .select()
+      .from(stockEntries)
+      .where(and(
+        eq(stockEntries.productId, productId), 
+        eq(stockEntries.storeId, storeId),
+        sql`${stockEntries.date} < ${date}`
+      ))
       .orderBy(desc(stockEntries.date))
       .limit(1);
     return result[0];

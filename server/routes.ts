@@ -319,9 +319,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Get previous stock entry for calculations
-      const prevEntry = await storage.getLatestStockEntry(entryData.productId, entryData.storeId);
-      const previousExpected = prevEntry?.expectedStock || 0;
+      // Get previous stock entry for calculations (from before this date)
+      const prevEntry = await storage.getPreviousStockEntry(entryData.date, entryData.productId, entryData.storeId);
+      const previousReportedStock = prevEntry?.reportedStock || 0;
       
       // Calculate expected stock
       const delivered = entryData.delivered || 0;
@@ -329,11 +329,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sales = entryData.sales || 0;
       const reportedStock = entryData.reportedStock || 0;
       
-      const expectedStock = previousExpected + delivered - waste - sales;
+      // Expected stock = previous day's reported stock + delivered - sales - waste
+      const expectedStock = previousReportedStock + delivered - waste - sales;
       
-      // Calculate discrepancy percentage
-      const discrepancy = delivered > 0 
-        ? ((reportedStock - expectedStock) / delivered) * 100 
+      // Calculate discrepancy percentage based on total inventory base
+      const inventoryBase = previousReportedStock + delivered;
+      const discrepancy = inventoryBase > 0 
+        ? ((reportedStock - expectedStock) / inventoryBase) * 100 
         : 0;
       
       const entry = await storage.createStockEntry({
@@ -352,18 +354,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/stock-entries/:id", requireRole("Admin", "Manager"), async (req, res) => {
     try {
-      const { delivered, sales } = req.body;
-      const entry = await storage.updateStockEntry(req.params.id, { delivered, sales });
+      const updateData = req.body;
+      const entry = await storage.updateStockEntry(req.params.id, updateData);
       
       if (!entry) {
         return res.status(404).json({ error: "Stock entry not found" });
       }
       
+      // Get previous stock entry for accurate calculations (from before this entry's date)
+      const prevEntry = await storage.getPreviousStockEntry(entry.date, entry.productId, entry.storeId);
+      const previousReportedStock = prevEntry?.reportedStock || 0;
+      
       // Recalculate expected stock and discrepancy
-      const previousExpected = 0; // You may want to get the actual previous stock
-      const expectedStock = previousExpected + (entry.delivered || 0) - (entry.waste || 0) - (entry.sales || 0);
-      const discrepancy = (entry.delivered || 0) > 0 
-        ? ((entry.reportedStock - expectedStock) / (entry.delivered || 1)) * 100 
+      const delivered = entry.delivered || 0;
+      const waste = entry.waste || 0;
+      const sales = entry.sales || 0;
+      const reportedStock = entry.reportedStock || 0;
+      
+      // Expected stock = previous day's reported stock + delivered - sales - waste
+      const expectedStock = previousReportedStock + delivered - waste - sales;
+      
+      // Calculate discrepancy percentage based on total inventory base
+      const inventoryBase = previousReportedStock + delivered;
+      const discrepancy = inventoryBase > 0 
+        ? ((reportedStock - expectedStock) / inventoryBase) * 100 
         : 0;
       
       const updatedEntry = await storage.updateStockEntry(req.params.id, {
