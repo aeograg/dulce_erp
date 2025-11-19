@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
 import { pool } from "../db";
@@ -6,6 +7,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+app.set("trust proxy", 1); // Trust Replit proxy
 
 declare module 'express-session' {
   interface SessionData {
@@ -90,7 +92,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Create HTTP server ONCE - this preserves Set-Cookie headers
+  const server = createServer(app);
+
+  // Register API routes (no longer creates its own server)
+  await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

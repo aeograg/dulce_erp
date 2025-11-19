@@ -1,12 +1,11 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, requireAuth, requireRole } from "./auth";
 import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, insertInventorySchema, recipes } from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // User Management Routes (Admin only)
   app.get("/api/users", requireRole("Admin"), async (req, res) => {
     try {
@@ -575,7 +574,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch discrepancies" });
     }
   });
-
-  const httpServer = createServer(app);
-  return httpServer;
 }
