@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import pgSession from "connect-pg-simple";
+import { pool } from "../db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -18,7 +20,14 @@ declare module 'http' {
   }
 }
 
+const PostgresStore = pgSession(session);
+
 app.use(session({
+  store: new PostgresStore({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || "bakery-erp-secret-key-change-in-production",
   resave: false,
   saveUninitialized: false,
@@ -26,6 +35,7 @@ app.use(session({
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
   },
 }));
 
