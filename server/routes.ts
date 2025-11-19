@@ -84,6 +84,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session!.userId = user.id;
       req.session!.userRole = user.role;
 
+      // Explicitly save session to database before responding
+      await new Promise<void>((resolve, reject) => {
+        req.session!.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error) {

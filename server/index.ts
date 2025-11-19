@@ -31,11 +31,13 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "bakery-erp-secret-key-change-in-production",
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust proxy headers from Vite
   cookie: {
-    secure: process.env.NODE_ENV === "production",
+    secure: false, // Must be false in development for localhost
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
+    sameSite: "lax",
+    path: "/",
   },
 }));
 
@@ -50,6 +52,17 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Debug: Log session info for API requests
+  if (path.startsWith("/api")) {
+    console.log(`[SESSION DEBUG] ${req.method} ${path}`, {
+      sessionID: req.sessionID,
+      hasSession: !!req.session,
+      userId: req.session?.userId,
+      userRole: req.session?.userRole,
+      cookies: req.headers.cookie
+    });
+  }
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
