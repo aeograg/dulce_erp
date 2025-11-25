@@ -69,7 +69,7 @@ export default function Deliveries() {
   });
 
   const { data: predeterminedDeliveries = [] } = useQuery<any[]>({
-    queryKey: ["/api/predetermined-deliveries", predeterminedStore],
+    queryKey: [predeterminedStore ? `/api/predetermined-deliveries?storeId=${predeterminedStore}` : "/api/predetermined-deliveries"],
     enabled: !!predeterminedStore,
   });
 
