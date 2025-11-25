@@ -126,3 +126,16 @@ export const inventory = pgTable("inventory", {
 export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true, createdAt: true });
 export type InsertInventory = z.infer<typeof insertInventorySchema>;
 export type Inventory = typeof inventory.$inferSelect;
+
+export const predeterminedDeliveries = pgTable("predetermined_deliveries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
+  productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  defaultQuantity: integer("default_quantity").notNull(),
+  frequency: text("frequency").notNull().default("daily"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPredeterminedDeliverySchema = createInsertSchema(predeterminedDeliveries).omit({ id: true, createdAt: true });
+export type InsertPredeterminedDelivery = z.infer<typeof insertPredeterminedDeliverySchema>;
+export type PredeterminedDelivery = typeof predeterminedDeliveries.$inferSelect;

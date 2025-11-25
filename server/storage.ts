@@ -9,6 +9,7 @@ import {
   deliveries,
   sales,
   inventory,
+  predeterminedDeliveries,
   type User,
   type InsertUser,
   type Store,
@@ -27,6 +28,7 @@ import {
   type InsertSale,
   type Inventory,
   type InsertInventory,
+  type PredeterminedDelivery,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -85,6 +87,10 @@ export interface IStorage {
   createDelivery(delivery: InsertDelivery): Promise<Delivery>;
   updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined>;
   deleteDelivery(id: string): Promise<void>;
+  
+  // Predetermined Deliveries
+  getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>>;
+  getAllPredeterminedDeliveries(): Promise<any[]>;
   
   // Sales
   getAllSales(): Promise<Sale[]>;
@@ -572,6 +578,38 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return discrepancies;
+  }
+
+  // Predetermined Deliveries
+  async getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>> {
+    const results = await db.select({
+      id: predeterminedDeliveries.id,
+      storeId: predeterminedDeliveries.storeId,
+      productId: predeterminedDeliveries.productId,
+      defaultQuantity: predeterminedDeliveries.defaultQuantity,
+      frequency: predeterminedDeliveries.frequency,
+      productName: products.name,
+    }).from(predeterminedDeliveries)
+      .leftJoin(products, eq(predeterminedDeliveries.productId, products.id))
+      .where(eq(predeterminedDeliveries.storeId, storeId));
+    
+    return results;
+  }
+
+  async getAllPredeterminedDeliveries(): Promise<any[]> {
+    const results = await db.select({
+      id: predeterminedDeliveries.id,
+      storeId: predeterminedDeliveries.storeId,
+      productId: predeterminedDeliveries.productId,
+      defaultQuantity: predeterminedDeliveries.defaultQuantity,
+      frequency: predeterminedDeliveries.frequency,
+      productName: products.name,
+      storeName: stores.name,
+    }).from(predeterminedDeliveries)
+      .leftJoin(products, eq(predeterminedDeliveries.productId, products.id))
+      .leftJoin(stores, eq(predeterminedDeliveries.storeId, stores.id));
+    
+    return results;
   }
 }
 

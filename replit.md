@@ -53,6 +53,8 @@ Preferred communication style: Simple, everyday language.
 - **Waste Management System:** `maxWastePercent` field in Product model, real-time waste percentage calculation, visual warnings, and color-coded validation.
 - **Stock Entry Duplicate Prevention:** Server-side validation to prevent duplicate entries for the same date, product, and store.
 
+- **Predetermined Delivery Feature**: Pre-configured delivery schedules for recurring store deliveries with editable quantities in a modal interface, automatically deducts from production center and adds to store inventory with inventory validation.
+
 ## External Dependencies
 
 **Database & ORM:**

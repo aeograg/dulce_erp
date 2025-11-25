@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, requireAuth, requireRole } from "./auth";
-import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, insertInventorySchema, recipes } from "@shared/schema";
+import { insertProductSchema, insertIngredientSchema, insertRecipeSchema, insertStockEntrySchema, insertDeliverySchema, insertSaleSchema, insertInventorySchema, insertPredeterminedDeliverySchema, recipes } from "@shared/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 
@@ -452,6 +452,70 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete delivery" });
+    }
+  });
+
+  // Predetermined Delivery Routes
+  app.get("/api/predetermined-deliveries", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const storeId = req.query.storeId as string | undefined;
+      let deliveries;
+      if (storeId) {
+        deliveries = await storage.getPredeterminedDeliveriesByStore(storeId);
+      } else {
+        deliveries = await storage.getAllPredeterminedDeliveries();
+      }
+      res.json(deliveries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch predetermined deliveries" });
+    }
+  });
+
+  app.post("/api/deliveries/predetermined", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const { date, storeId, products } = req.body;
+      
+      if (!date || !storeId || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ 
+          error: "Missing date, storeId, or products array" 
+        });
+      }
+      
+      const deliveryRecords = [];
+      const errors = [];
+      
+      for (const { productId, quantity } of products) {
+        if (quantity <= 0) continue;
+        
+        try {
+          const delivery = await storage.createDelivery({
+            date,
+            storeId,
+            productId,
+            quantitySent: quantity,
+          });
+          deliveryRecords.push(delivery);
+        } catch (error: any) {
+          errors.push({
+            productId,
+            error: error.message,
+          });
+        }
+      }
+      
+      if (errors.length > 0 && deliveryRecords.length === 0) {
+        return res.status(400).json({
+          error: "Failed to create any deliveries",
+          details: errors,
+        });
+      }
+      
+      res.status(201).json({
+        created: deliveryRecords,
+        failed: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to process predetermined delivery" });
     }
   });
 
