@@ -9,9 +9,12 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").notNull(),
   storeId: varchar("store_id").references(() => stores.id),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -19,9 +22,12 @@ export const stores = pgTable("stores", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   deliverySchedule: text("delivery_schedule").notNull(),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertStoreSchema = createInsertSchema(stores).omit({ id: true });
+export const insertStoreSchema = createInsertSchema(stores).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertStore = z.infer<typeof insertStoreSchema>;
 export type Store = typeof stores.$inferSelect;
 
@@ -30,9 +36,12 @@ export const ingredients = pgTable("ingredients", {
   name: text("name").notNull(),
   costPerUnit: real("cost_per_unit").notNull(),
   unit: text("unit").notNull(),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertIngredientSchema = createInsertSchema(ingredients).omit({ id: true });
+export const insertIngredientSchema = createInsertSchema(ingredients).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
 export type Ingredient = typeof ingredients.$inferSelect;
 
@@ -45,10 +54,12 @@ export const products = pgTable("products", {
   minStockLevel: integer("min_stock_level").notNull(),
   maxWastePercent: real("max_waste_percent").notNull().default(5.0),
   batchYield: real("batch_yield").notNull().default(1),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true }).extend({
+export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, updatedAt: true }).extend({
   batchYield: z.number().min(0.01, "Batch yield must be at least 0.01"),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
@@ -59,9 +70,12 @@ export const recipes = pgTable("recipes", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   ingredientId: varchar("ingredient_id").notNull().references(() => ingredients.id, { onDelete: "cascade" }),
   quantity: real("quantity").notNull(),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true });
+export const insertRecipeSchema = createInsertSchema(recipes).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
 export type Recipe = typeof recipes.$inferSelect;
 
@@ -77,10 +91,12 @@ export const stockEntries = pgTable("stock_entries", {
   expectedStock: integer("expected_stock").notNull().default(0),
   reportedRemaining: integer("reported_remaining").notNull().default(0),
   discrepancy: real("discrepancy").notNull().default(0),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertStockEntrySchema = createInsertSchema(stockEntries).omit({ id: true, createdAt: true });
+export const insertStockEntrySchema = createInsertSchema(stockEntries).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertStockEntry = z.infer<typeof insertStockEntrySchema>;
 export type StockEntry = typeof stockEntries.$inferSelect;
 
@@ -90,10 +106,12 @@ export const deliveries = pgTable("deliveries", {
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   quantitySent: integer("quantity_sent").notNull().default(0),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: true, createdAt: true });
+export const insertDeliverySchema = createInsertSchema(deliveries).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertDelivery = z.infer<typeof insertDeliverySchema>;
 export type Delivery = typeof deliveries.$inferSelect;
 
@@ -105,10 +123,12 @@ export const sales = pgTable("sales", {
   quantity: integer("quantity").notNull().default(0),
   unitPrice: real("unit_price"),
   source: varchar("source", { length: 50 }).default("manual"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, createdAt: true });
+export const insertSaleSchema = createInsertSchema(sales).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSale = z.infer<typeof insertSaleSchema>;
 export type Sale = typeof sales.$inferSelect;
 
@@ -120,10 +140,12 @@ export const inventory = pgTable("inventory", {
   quantityInStock: integer("quantity_in_stock").notNull().default(0),
   quantityProduced: integer("quantity_produced").notNull().default(0),
   notes: text("notes"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true, createdAt: true });
+export const insertInventorySchema = createInsertSchema(inventory).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertInventory = z.infer<typeof insertInventorySchema>;
 export type Inventory = typeof inventory.$inferSelect;
 
@@ -135,9 +157,11 @@ export const predeterminedDeliveries = pgTable("predetermined_deliveries", {
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   defaultQuantity: integer("default_quantity").notNull(),
   frequency: text("frequency").notNull().default("daily"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertPredeterminedDeliverySchema = createInsertSchema(predeterminedDeliveries).omit({ id: true, createdAt: true });
+export const insertPredeterminedDeliverySchema = createInsertSchema(predeterminedDeliveries).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPredeterminedDelivery = z.infer<typeof insertPredeterminedDeliverySchema>;
 export type PredeterminedDelivery = typeof predeterminedDeliveries.$inferSelect;

@@ -4,6 +4,18 @@
 
 Dulce ERP is a comprehensive bakery management system designed for efficient management of inventory, multi-store stock tracking, cost calculation, recipe management, and AI-powered delivery forecasting. It features role-based access control for Admin, Manager, and Staff, a two-stage stock entry workflow, automatic cost calculation from ingredient-only recipes, stock discrepancy detection, and waste tracking. The system aims to streamline bakery operations, reduce waste, and optimize delivery planning.
 
+## Recent Changes
+
+**November 25, 2025 - Audit Fields Implementation (COMPLETED)**
+- Added comprehensive audit tracking to all 11 database tables: `createdBy`, `createdAt`, `updatedAt`
+- Tables updated: users, stores, products, ingredients, recipes, stock_entries, deliveries, sales, inventory, predetermined_deliveries, session
+- Database migrations applied successfully with Drizzle Kit
+- Backend storage layer updated to capture `username` from session and store in `createdBy` field
+- API routes updated to pass authenticated user's username to all create/update operations
+- Session management enhanced to store `username` alongside existing `userId`, `userRole`, `userStoreId`
+- All timestamps auto-managed by PostgreSQL defaults (`defaultNow()` for creation, `defaultNow().onUpdateNow()` for updates)
+- Feature enables CRUD audit trails for compliance and debugging
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -54,6 +66,8 @@ Preferred communication style: Simple, everyday language.
 - **Stock Entry Duplicate Prevention:** Server-side validation to prevent duplicate entries for the same date, product, and store.
 
 - **Predetermined Delivery Feature**: Pre-configured delivery schedules for recurring store deliveries with editable quantities in a modal interface, automatically deducts from production center and adds to store inventory with inventory validation.
+
+- **Audit Fields (createdBy, createdAt, updatedAt)**: Comprehensive CRUD tracking on all major tables. `createdBy` captures the username of who created each record, `createdAt` and `updatedAt` track timestamps for compliance and debugging. Automatically populated via session-based user identification and database defaults.
 
 ## External Dependencies
 

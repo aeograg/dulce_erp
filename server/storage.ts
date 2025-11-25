@@ -37,33 +37,33 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: InsertUser, createdBy?: string): Promise<User>;
   updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   
   // Stores
   getAllStores(): Promise<Store[]>;
   getStore(id: string): Promise<Store | undefined>;
-  createStore(store: InsertStore): Promise<Store>;
+  createStore(store: InsertStore, createdBy?: string): Promise<Store>;
   
   // Products
   getAllProducts(): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   getProductByCode(code: string): Promise<Product | undefined>;
-  createProduct(product: InsertProduct): Promise<Product>;
+  createProduct(product: InsertProduct, createdBy?: string): Promise<Product>;
   updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined>;
   deleteProduct(id: string): Promise<void>;
   
   // Ingredients
   getAllIngredients(): Promise<Ingredient[]>;
   getIngredient(id: string): Promise<Ingredient | undefined>;
-  createIngredient(ingredient: InsertIngredient): Promise<Ingredient>;
+  createIngredient(ingredient: InsertIngredient, createdBy?: string): Promise<Ingredient>;
   updateIngredient(id: string, ingredient: Partial<InsertIngredient>): Promise<Ingredient | undefined>;
   deleteIngredient(id: string): Promise<void>;
   
   // Recipes
   getRecipesByProduct(productId: string): Promise<Recipe[]>;
-  createRecipe(recipe: InsertRecipe): Promise<Recipe>;
+  createRecipe(recipe: InsertRecipe, createdBy?: string): Promise<Recipe>;
   deleteRecipe(id: string): Promise<void>;
   deleteRecipesByProduct(productId: string): Promise<void>;
   recalculateProductCost(productId: string): Promise<void>;
@@ -77,21 +77,21 @@ export interface IStorage {
   getLatestStockEntry(productId: string, storeId: string): Promise<StockEntry | undefined>;
   getPreviousStockEntry(date: string, productId: string, storeId: string): Promise<StockEntry | undefined>;
   getStockEntryByDateProductStore(date: string, productId: string, storeId: string): Promise<StockEntry | undefined>;
-  createStockEntry(entry: InsertStockEntry): Promise<StockEntry>;
+  createStockEntry(entry: InsertStockEntry, createdBy?: string): Promise<StockEntry>;
   updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined>;
   
   // Deliveries
   getAllDeliveries(): Promise<Delivery[]>;
   getDeliveriesByDate(date: string): Promise<Delivery[]>;
   getDeliveriesByStore(storeId: string): Promise<Delivery[]>;
-  createDelivery(delivery: InsertDelivery): Promise<Delivery>;
+  createDelivery(delivery: InsertDelivery, createdBy?: string): Promise<Delivery>;
   updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined>;
   deleteDelivery(id: string): Promise<void>;
   
   // Predetermined Deliveries
   getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>>;
   getAllPredeterminedDeliveries(): Promise<any[]>;
-  createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery>;
+  createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }, createdBy?: string): Promise<PredeterminedDelivery>;
   deletePredeterminedDelivery(id: string): Promise<void>;
   
   // Sales
@@ -99,7 +99,7 @@ export interface IStorage {
   getSalesByDate(date: string): Promise<Sale[]>;
   getSalesByStore(storeId: string): Promise<Sale[]>;
   getSalesByDateAndStore(date: string, storeId: string): Promise<Sale[]>;
-  createSale(sale: InsertSale): Promise<Sale>;
+  createSale(sale: InsertSale, createdBy?: string): Promise<Sale>;
   
   // Inventory
   getAllInventory(storeId?: string): Promise<Inventory[]>;
@@ -133,13 +133,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users).orderBy(users.username);
   }
 
-  async createUser(user: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(user).returning();
+  async createUser(user: InsertUser, createdBy?: string): Promise<User> {
+    const result = await db.insert(users).values({ ...user, createdBy }).returning();
     return result[0];
   }
 
   async updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined> {
-    const result = await db.update(users).set(user).where(eq(users.id, id)).returning();
+    const result = await db.update(users).set({ ...user, updatedAt: new Date() }).where(eq(users.id, id)).returning();
     return result[0];
   }
 
@@ -157,8 +157,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createStore(store: InsertStore): Promise<Store> {
-    const result = await db.insert(stores).values(store).returning();
+  async createStore(store: InsertStore, createdBy?: string): Promise<Store> {
+    const result = await db.insert(stores).values({ ...store, createdBy }).returning();
     return result[0];
   }
 
@@ -177,13 +177,13 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createProduct(product: InsertProduct): Promise<Product> {
-    const result = await db.insert(products).values(product).returning();
+  async createProduct(product: InsertProduct, createdBy?: string): Promise<Product> {
+    const result = await db.insert(products).values({ ...product, createdBy }).returning();
     return result[0];
   }
 
   async updateProduct(id: string, product: Partial<InsertProduct>): Promise<Product | undefined> {
-    const result = await db.update(products).set(product).where(eq(products.id, id)).returning();
+    const result = await db.update(products).set({ ...product, updatedAt: new Date() }).where(eq(products.id, id)).returning();
     return result[0];
   }
 
@@ -201,13 +201,13 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createIngredient(ingredient: InsertIngredient): Promise<Ingredient> {
-    const result = await db.insert(ingredients).values(ingredient).returning();
+  async createIngredient(ingredient: InsertIngredient, createdBy?: string): Promise<Ingredient> {
+    const result = await db.insert(ingredients).values({ ...ingredient, createdBy }).returning();
     return result[0];
   }
 
   async updateIngredient(id: string, ingredient: Partial<InsertIngredient>): Promise<Ingredient | undefined> {
-    const result = await db.update(ingredients).set(ingredient).where(eq(ingredients.id, id)).returning();
+    const result = await db.update(ingredients).set({ ...ingredient, updatedAt: new Date() }).where(eq(ingredients.id, id)).returning();
     return result[0];
   }
 
@@ -220,8 +220,8 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(recipes).where(eq(recipes.productId, productId));
   }
 
-  async createRecipe(recipe: InsertRecipe): Promise<Recipe> {
-    const result = await db.insert(recipes).values(recipe).returning();
+  async createRecipe(recipe: InsertRecipe, createdBy?: string): Promise<Recipe> {
+    const result = await db.insert(recipes).values({ ...recipe, createdBy }).returning();
     return result[0];
   }
 
@@ -334,13 +334,13 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createStockEntry(entry: InsertStockEntry): Promise<StockEntry> {
-    const result = await db.insert(stockEntries).values(entry).returning();
+  async createStockEntry(entry: InsertStockEntry, createdBy?: string): Promise<StockEntry> {
+    const result = await db.insert(stockEntries).values({ ...entry, createdBy }).returning();
     return result[0];
   }
 
   async updateStockEntry(id: string, entry: Partial<InsertStockEntry>): Promise<StockEntry | undefined> {
-    const result = await db.update(stockEntries).set(entry).where(eq(stockEntries.id, id)).returning();
+    const result = await db.update(stockEntries).set({ ...entry, updatedAt: new Date() }).where(eq(stockEntries.id, id)).returning();
     return result[0];
   }
 
@@ -357,7 +357,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(deliveries).where(eq(deliveries.storeId, storeId)).orderBy(desc(deliveries.date));
   }
 
-  async createDelivery(delivery: InsertDelivery): Promise<Delivery> {
+  async createDelivery(delivery: InsertDelivery, createdBy?: string): Promise<Delivery> {
     const productionStoreId = await this.getProductionCenterStoreId();
     const quantity = delivery.quantitySent || 0;
     
@@ -378,12 +378,12 @@ export class DatabaseStorage implements IStorage {
     );
     
     // Create delivery record
-    const result = await db.insert(deliveries).values(delivery).returning();
+    const result = await db.insert(deliveries).values({ ...delivery, createdBy }).returning();
     return result[0];
   }
 
   async updateDelivery(id: string, delivery: Partial<InsertDelivery>): Promise<Delivery | undefined> {
-    const result = await db.update(deliveries).set(delivery).where(eq(deliveries.id, id)).returning();
+    const result = await db.update(deliveries).set({ ...delivery, updatedAt: new Date() }).where(eq(deliveries.id, id)).returning();
     return result[0];
   }
 
@@ -410,8 +410,8 @@ export class DatabaseStorage implements IStorage {
       .orderBy(sales.productId);
   }
 
-  async createSale(sale: InsertSale): Promise<Sale> {
-    const result = await db.insert(sales).values(sale).returning();
+  async createSale(sale: InsertSale, createdBy?: string): Promise<Sale> {
+    const result = await db.insert(sales).values({ ...sale, createdBy }).returning();
     return result[0];
   }
 
@@ -618,7 +618,7 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery> {
+  async createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }, createdBy?: string): Promise<PredeterminedDelivery> {
     const result = await db.insert(predeterminedDeliveries).values({
       templateId: data.templateId,
       name: data.name,
@@ -626,6 +626,7 @@ export class DatabaseStorage implements IStorage {
       productId: data.productId,
       defaultQuantity: data.defaultQuantity,
       frequency: data.frequency || 'daily',
+      createdBy,
     }).returning();
     return result[0];
   }

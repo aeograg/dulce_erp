@@ -26,7 +26,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         password: hashedPassword,
         role,
         storeId: storeId || null,
-      });
+      }, (req.session as any).username);
       const { password: _, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
     } catch (error: any) {
@@ -81,6 +81,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
 
       req.session!.userId = user.id;
+      (req.session as any).username = user.username;
       req.session!.userRole = user.role;
       req.session!.userStoreId = user.storeId || undefined;
 
@@ -157,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/products", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const productData = insertProductSchema.parse(req.body);
-      const product = await storage.createProduct(productData);
+      const product = await storage.createProduct(productData, (req.session as any).username);
       res.status(201).json(product);
     } catch (error: any) {
       console.error("Create product error:", error);
@@ -200,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/ingredients", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const ingredientData = insertIngredientSchema.parse(req.body);
-      const ingredient = await storage.createIngredient(ingredientData);
+      const ingredient = await storage.createIngredient(ingredientData, (req.session as any).username);
       res.status(201).json(ingredient);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to create ingredient" });
@@ -258,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/recipes", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const recipeData = insertRecipeSchema.parse(req.body);
-      const recipe = await storage.createRecipe(recipeData);
+      const recipe = await storage.createRecipe(recipeData, (req.session as any).username);
       
       // Recalculate product cost based on new recipe
       await storage.recalculateProductCost(recipeData.productId);
@@ -351,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         expectedStock,
         reportedRemaining: entryData.reportedStock,
         discrepancy,
-      });
+      }, (req.session as any).username);
       
       res.status(201).json(entry);
     } catch (error: any) {
@@ -426,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       // createDelivery handles all inventory operations:
       // 1. Deducts from production center inventory
       // 2. Adds to target store inventory
-      const delivery = await storage.createDelivery(deliveryData);
+      const delivery = await storage.createDelivery(deliveryData, (req.session as any).username);
       res.status(201).json(delivery);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to create delivery" });
@@ -496,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<void> {
             productId,
             defaultQuantity,
             frequency: 'daily',
-          });
+          }, (req.session as any).username);
           savedTemplates.push(template);
         } catch (error: any) {
           errors.push({
@@ -594,7 +595,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/sales", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const validatedData = insertSaleSchema.parse(req.body);
-      const sale = await storage.createSale(validatedData);
+      const sale = await storage.createSale(validatedData, (req.session as any).username);
       res.status(201).json(sale);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to create sale" });
