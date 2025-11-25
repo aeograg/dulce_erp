@@ -1,4 +1,4 @@
-import { Home, Package, ClipboardList, DollarSign, FileText, Settings, LogOut, Wheat, Users, CookingPot, ShoppingCart, TrendingUp, Truck, Database, BarChart3, Boxes } from "lucide-react";
+import { Home, Package, ClipboardList, DollarSign, FileText, Settings, LogOut, Wheat, Users, CookingPot, ShoppingCart, TrendingUp, Truck, Database, BarChart3, Boxes, Shield, ListTodo } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -31,12 +31,14 @@ const menuItems: MenuItem[] = [
   { title: "Stock Control", url: "/stock-control", icon: Database, roles: ["Admin", "Manager"] },
   { title: "Remaining Stock", url: "/remaining-stock", icon: BarChart3, roles: ["Admin", "Manager"] },
   { title: "Inventory", url: "/inventory", icon: Boxes, roles: ["Admin", "Manager"] },
+  { title: "Needs List", url: "/needs-list", icon: ListTodo, roles: ["Admin", "Manager", "Staff"] },
   { title: "Delivery Forecast", url: "/delivery-forecast", icon: TrendingUp, roles: ["Admin", "Manager"] },
   { title: "Ingredients", url: "/ingredients", icon: Wheat, roles: ["Admin", "Manager"] },
   { title: "Recipes", url: "/recipes", icon: CookingPot, roles: ["Admin", "Manager"] },
   { title: "Reports", url: "/reports", icon: FileText, roles: ["Admin", "Manager"] },
   { title: "Cost Analysis", url: "/cost-analysis", icon: DollarSign, roles: ["Admin", "Manager"] },
   { title: "Users", url: "/users", icon: Users, roles: ["Admin"] },
+  { title: "Authorization", url: "/authorization", icon: Shield, roles: ["Admin"] },
 ];
 
 interface AppSidebarProps {

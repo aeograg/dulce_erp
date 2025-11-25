@@ -65,10 +65,6 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               Sign In
             </Button>
           </form>
-          <div className="mt-4 text-xs text-center text-muted-foreground">
-            <p>Demo accounts:</p>
-            <p>admin/password • manager/password • staff/password</p>
-          </div>
         </CardContent>
       </Card>
     </div>

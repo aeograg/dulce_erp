@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, real, integer, date, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, real, integer, date, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -53,14 +53,14 @@ export const products = pgTable("products", {
   sellingPrice: real("selling_price").notNull(),
   minStockLevel: integer("min_stock_level").notNull(),
   maxWastePercent: real("max_waste_percent").notNull().default(5.0),
-  batchYield: real("batch_yield").notNull().default(1),
+  batchYield: integer("batch_yield").notNull().default(1),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({ id: true, createdAt: true, updatedAt: true }).extend({
-  batchYield: z.number().min(0.01, "Batch yield must be at least 0.01"),
+  batchYield: z.number().int("Batch yield must be a whole number").min(1, "Batch yield must be at least 1"),
 });
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
@@ -84,12 +84,12 @@ export const stockEntries = pgTable("stock_entries", {
   date: date("date").notNull(),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
-  delivered: integer("delivered").notNull().default(0),
-  reportedStock: integer("reported_stock").notNull().default(0),
-  waste: integer("waste").notNull().default(0),
-  sales: integer("sales").notNull().default(0),
-  expectedStock: integer("expected_stock").notNull().default(0),
-  reportedRemaining: integer("reported_remaining").notNull().default(0),
+  delivered: numeric("delivered", { precision: 10, scale: 3 }).notNull().default("0"),
+  reportedStock: numeric("reported_stock", { precision: 10, scale: 3 }).notNull().default("0"),
+  waste: numeric("waste", { precision: 10, scale: 3 }).notNull().default("0"),
+  sales: numeric("sales", { precision: 10, scale: 3 }).notNull().default("0"),
+  expectedStock: numeric("expected_stock", { precision: 10, scale: 3 }).notNull().default("0"),
+  reportedRemaining: numeric("reported_remaining", { precision: 10, scale: 3 }).notNull().default("0"),
   discrepancy: real("discrepancy").notNull().default(0),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -105,7 +105,7 @@ export const deliveries = pgTable("deliveries", {
   date: date("date").notNull(),
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  quantitySent: integer("quantity_sent").notNull().default(0),
+  quantitySent: numeric("quantity_sent", { precision: 10, scale: 3 }).notNull().default("0"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -120,7 +120,7 @@ export const sales = pgTable("sales", {
   date: date("date").notNull(),
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  quantity: integer("quantity").notNull().default(0),
+  quantity: numeric("quantity", { precision: 10, scale: 3 }).notNull().default("0"),
   unitPrice: real("unit_price"),
   source: varchar("source", { length: 50 }).default("manual"),
   createdBy: text("created_by"),
@@ -137,8 +137,8 @@ export const inventory = pgTable("inventory", {
   date: date("date").notNull(),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }),
-  quantityInStock: integer("quantity_in_stock").notNull().default(0),
-  quantityProduced: integer("quantity_produced").notNull().default(0),
+  quantityInStock: numeric("quantity_in_stock", { precision: 10, scale: 3 }).notNull().default("0"),
+  quantityProduced: numeric("quantity_produced", { precision: 10, scale: 3 }).notNull().default("0"),
   notes: text("notes"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -155,7 +155,7 @@ export const predeterminedDeliveries = pgTable("predetermined_deliveries", {
   name: text("name").notNull(),
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
-  defaultQuantity: integer("default_quantity").notNull(),
+  defaultQuantity: numeric("default_quantity", { precision: 10, scale: 3 }).notNull(),
   frequency: text("frequency").notNull().default("daily"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -165,3 +165,35 @@ export const predeterminedDeliveries = pgTable("predetermined_deliveries", {
 export const insertPredeterminedDeliverySchema = createInsertSchema(predeterminedDeliveries).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPredeterminedDelivery = z.infer<typeof insertPredeterminedDeliverySchema>;
 export type PredeterminedDelivery = typeof predeterminedDeliveries.$inferSelect;
+
+export const userPermissions = pgTable("user_permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  pagePath: text("page_path").notNull(),
+  allowed: integer("allowed").notNull().default(1),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertUserPermissionSchema = createInsertSchema(userPermissions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertUserPermission = z.infer<typeof insertUserPermissionSchema>;
+export type UserPermission = typeof userPermissions.$inferSelect;
+
+export const needsRequests = pgTable("needs_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
+  requestType: text("request_type").notNull(),
+  itemId: varchar("item_id"),
+  itemName: text("item_name"),
+  quantity: numeric("quantity", { precision: 10, scale: 3 }).notNull(),
+  status: text("status").notNull().default("pending"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertNeedsRequestSchema = createInsertSchema(needsRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertNeedsRequest = z.infer<typeof insertNeedsRequestSchema>;
+export type NeedsRequest = typeof needsRequests.$inferSelect;

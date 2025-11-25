@@ -1,0 +1,52 @@
+
+Clean Up Demo Accounts in Login and Seeding
+Feature Description:
+Remove all demo user accounts from the login system and seeding script, leaving only the admin account with username 'admin' and password '9744aeo'. Hash the password with bcrypt.
+Detailed Work Items:
+* Seeding Update:
+    * In server/seed.ts, remove Manager/Staff seeds, only insert admin with bcrypt.hash('9744aeo', 10).
+* Login Page:
+    * If demo logins shown, remove from client/src/pages/Login.tsx.
+* DB Cleanup:
+    * Run delete query for non-admin users.
+Allow Decimal Values in Integer Fields (Change to Numeric)
+Feature Description:
+Currently, integer fields (e.g., quantities) reject decimals like 0.001. Change schema types to numeric(precision 10, scale 3) for flexibility in measurements (e.g., fractional units).
+Detailed Work Items:
+* Schema:
+    * Update fields like quantityProduced, delivered to numeric.
+    * Migrate.
+* 
+Enforce Batch Yield as Integer in Recipes
+Feature Description:
+The batchYield field in recipes currently allows/requires decimals (e.g., 100.01), but it should be strict integer (whole units).
+Detailed Work Items:
+* Schema:
+    * Change to integer in schema.ts.
+* Frontend:
+    * In Recipes.tsx, , Zod validator z.number().int().
+* Backend:
+    * Validate in storage/routes.
+New Authorization Page for Role-Based Page Access
+Feature Description:
+Create an Admin-only page /authorization listing all users. Clicking a user shows a list of all app pages (e.g., Dashboard, Inventory, StockControl, Deliveries, etc.) with checkboxes to grant/revoke access. Store permissions in a new table user_permissions (userId, pagePath, allowed).
+Detailed Work Items:
+* Schema:
+    * New table user_permissions.
+* Backend:
+    * Routes for get/set permissions.
+    * Middleware to check permissions on routes.
+* Frontend:
+    * New page Authorization.tsx with user list, modal for checkboxes.
+New Needs List Module
+Feature Description:
+New module /needs-list for stores/production to request products or raw materials (ingredients). Two buttons: "Request Products" (select from products or non-inventory items like paper/coffee via free-text or new table), "Request Raw Materials" (select ingredients). Enter quantities, submit as requests (new table needs_requests).
+Detailed Work Items:
+* Schema:
+    * New table needs_requests: id, storeId, type ('product'/'raw'), itemId or name, quantity, status.
+* Backend:
+    * Routes for create/get requests.
+* Frontend:
+    * Page with buttons opening forms/modals, selectors for items.
+* Non-Inventory Items:
+    * Allow free-text or new misc_items table.

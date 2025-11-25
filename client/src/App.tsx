@@ -23,6 +23,8 @@ import Deliveries from "@/pages/deliveries";
 import StockControl from "@/pages/stock-control";
 import RemainingStock from "@/pages/remaining-stock";
 import Inventory from "@/pages/inventory";
+import Authorization from "@/pages/authorization";
+import NeedsList from "@/pages/needs-list";
 
 function AuthenticatedApp() {
   const { user, logout } = useAuth();
@@ -115,6 +117,16 @@ function AuthenticatedApp() {
               <Route path="/inventory">
                 <RequireAuth roles={["Admin", "Manager"]}>
                   <Inventory />
+                </RequireAuth>
+              </Route>
+              <Route path="/authorization">
+                <RequireAuth roles={["Admin"]}>
+                  <Authorization />
+                </RequireAuth>
+              </Route>
+              <Route path="/needs-list">
+                <RequireAuth>
+                  <NeedsList />
                 </RequireAuth>
               </Route>
               <Route component={NotFound} />

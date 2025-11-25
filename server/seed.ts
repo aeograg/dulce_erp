@@ -6,16 +6,14 @@ import { eq } from "drizzle-orm";
 async function seed() {
   console.log("Seeding database...");
 
-  // Create default users
-  const hashedPassword = await hashPassword("password");
+  // Create admin user only
+  const hashedPassword = await hashPassword("9744aeo");
   
   await db.insert(users).values([
     { username: "admin", password: hashedPassword, role: "Admin" },
-    { username: "manager", password: hashedPassword, role: "Manager" },
-    { username: "staff", password: hashedPassword, role: "Staff" },
   ]).onConflictDoNothing();
 
-  console.log("✓ Users created");
+  console.log("✓ Admin user created");
 
   // Create stores
   await db.insert(stores).values([
@@ -124,10 +122,7 @@ async function seed() {
   console.log("✓ Sample recipes created with batch yields");
 
   console.log("\nDatabase seeded successfully!");
-  console.log("\nDemo accounts:");
-  console.log("  - admin/password (Admin)");
-  console.log("  - manager/password (Manager)");
-  console.log("  - staff/password (Staff)");
+  console.log("\nAdmin account: admin");
   console.log("\nSample recipes:");
   console.log("  - Croissant: Batch yields 12 units");
   console.log("  - Baguette: Batch yields 6 units");

@@ -49,7 +49,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
       sellingPrice: formData.sellingPrice === '' ? 0 : Number(formData.sellingPrice),
       minStockLevel: formData.minStockLevel === '' ? 0 : Number(formData.minStockLevel),
       maxWastePercent: formData.maxWastePercent === '' ? 5.0 : Number(formData.maxWastePercent),
-      batchYield: formData.batchYield === '' ? 1 : Number(formData.batchYield),
+      batchYield: formData.batchYield === '' ? 1 : Math.round(Number(formData.batchYield)),
     };
     if (product?.id) {
       submittedData.id = product.id;
@@ -157,13 +157,13 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                   id="batchYield"
                   type="number"
                   step="1"
-                  min="0.01"
+                  min="1"
                   value={formData.batchYield}
                   onChange={(e) => handleChange("batchYield", e.target.value)}
                   placeholder="1"
                   required
                   data-testid="input-batch-yield"
-                  title="Number of units produced per batch (e.g., 12 croissants per batch)"
+                  title="Number of whole units produced per batch (e.g., 12 croissants per batch)"
                 />
               </div>
             </div>

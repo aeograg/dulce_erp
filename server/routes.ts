@@ -330,13 +330,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Get previous stock entry for calculations (from before this date)
       const prevEntry = await storage.getPreviousStockEntry(entryData.date, entryData.productId, entryData.storeId);
-      const previousReportedStock = prevEntry?.reportedStock || 0;
+      const previousReportedStock = Number(prevEntry?.reportedStock) || 0;
       
       // Calculate expected stock
-      const delivered = entryData.delivered || 0;
-      const waste = entryData.waste || 0;
-      const sales = entryData.sales || 0;
-      const reportedStock = entryData.reportedStock || 0;
+      const delivered = Number(entryData.delivered) || 0;
+      const waste = Number(entryData.waste) || 0;
+      const sales = Number(entryData.sales) || 0;
+      const reportedStock = Number(entryData.reportedStock) || 0;
       
       // Expected stock = previous day's reported stock + delivered - sales - waste
       const expectedStock = previousReportedStock + delivered - waste - sales;
@@ -349,7 +349,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const entry = await storage.createStockEntry({
         ...entryData,
-        expectedStock,
+        expectedStock: String(expectedStock),
         reportedRemaining: entryData.reportedStock,
         discrepancy,
       }, (req.session as any).username);
@@ -372,13 +372,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Get previous stock entry for accurate calculations (from before this entry's date)
       const prevEntry = await storage.getPreviousStockEntry(entry.date, entry.productId, entry.storeId);
-      const previousReportedStock = prevEntry?.reportedStock || 0;
+      const previousReportedStock = Number(prevEntry?.reportedStock) || 0;
       
       // Recalculate expected stock and discrepancy
-      const delivered = entry.delivered || 0;
-      const waste = entry.waste || 0;
-      const sales = entry.sales || 0;
-      const reportedStock = entry.reportedStock || 0;
+      const delivered = Number(entry.delivered) || 0;
+      const waste = Number(entry.waste) || 0;
+      const sales = Number(entry.sales) || 0;
+      const reportedStock = Number(entry.reportedStock) || 0;
       
       // Expected stock = previous day's reported stock + delivered - sales - waste
       const expectedStock = previousReportedStock + delivered - waste - sales;
@@ -390,7 +390,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         : 0;
       
       const updatedEntry = await storage.updateStockEntry(req.params.id, {
-        expectedStock,
+        expectedStock: String(expectedStock),
         discrepancy,
       });
       
@@ -697,6 +697,116 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.json(discrepancies);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch discrepancies" });
+    }
+  });
+
+  // User Permissions Routes (Admin only)
+  app.get("/api/permissions/:userId", requireRole("Admin"), async (req, res) => {
+    try {
+      const permissions = await storage.getUserPermissions(req.params.userId);
+      res.json(permissions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch permissions" });
+    }
+  });
+
+  app.post("/api/permissions", requireRole("Admin"), async (req, res) => {
+    try {
+      const { userId, pagePath, allowed } = req.body;
+      const permission = await storage.setUserPermission(
+        userId, 
+        pagePath, 
+        allowed, 
+        (req.session as any).username
+      );
+      res.status(201).json(permission);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to set permission" });
+    }
+  });
+
+  app.post("/api/permissions/batch", requireRole("Admin"), async (req, res) => {
+    try {
+      const { userId, permissions } = req.body;
+      const results = [];
+      for (const perm of permissions) {
+        const result = await storage.setUserPermission(
+          userId, 
+          perm.pagePath, 
+          perm.allowed, 
+          (req.session as any).username
+        );
+        results.push(result);
+      }
+      res.status(201).json(results);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to set permissions" });
+    }
+  });
+
+  app.delete("/api/permissions/:userId", requireRole("Admin"), async (req, res) => {
+    try {
+      await storage.deleteUserPermissions(req.params.userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete permissions" });
+    }
+  });
+
+  // Needs Requests Routes
+  app.get("/api/needs-requests", requireAuth, async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      const userRole = req.session.userRole;
+      const userStoreId = req.session.userStoreId;
+      
+      // Staff can only see their assigned store requests
+      let effectiveStoreId = storeId as string | undefined;
+      if (userRole === "Staff" && userStoreId) {
+        effectiveStoreId = userStoreId;
+      }
+      
+      let requests;
+      if (effectiveStoreId) {
+        requests = await storage.getNeedsRequestsByStore(effectiveStoreId);
+      } else {
+        requests = await storage.getAllNeedsRequests();
+      }
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch needs requests" });
+    }
+  });
+
+  app.post("/api/needs-requests", requireAuth, async (req, res) => {
+    try {
+      const requestData = req.body;
+      const request = await storage.createNeedsRequest(requestData, (req.session as any).username);
+      res.status(201).json(request);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to create needs request" });
+    }
+  });
+
+  app.patch("/api/needs-requests/:id/status", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const { status } = req.body;
+      const request = await storage.updateNeedsRequestStatus(req.params.id, status);
+      if (!request) {
+        return res.status(404).json({ error: "Needs request not found" });
+      }
+      res.json(request);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Failed to update request status" });
+    }
+  });
+
+  app.delete("/api/needs-requests/:id", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      await storage.deleteNeedsRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete needs request" });
     }
   });
 }

@@ -10,6 +10,8 @@ import {
   sales,
   inventory,
   predeterminedDeliveries,
+  userPermissions,
+  needsRequests,
   type User,
   type InsertUser,
   type Store,
@@ -29,6 +31,10 @@ import {
   type Inventory,
   type InsertInventory,
   type PredeterminedDelivery,
+  type UserPermission,
+  type InsertUserPermission,
+  type NeedsRequest,
+  type InsertNeedsRequest,
 } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -115,6 +121,18 @@ export interface IStorage {
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
   getStockDiscrepancies(threshold?: number): Promise<Array<StockEntry & { productName: string; storeName: string }>>;
+  
+  // User Permissions
+  getUserPermissions(userId: string): Promise<UserPermission[]>;
+  setUserPermission(userId: string, pagePath: string, allowed: boolean, createdBy?: string): Promise<UserPermission>;
+  deleteUserPermissions(userId: string): Promise<void>;
+  
+  // Needs Requests
+  getAllNeedsRequests(): Promise<NeedsRequest[]>;
+  getNeedsRequestsByStore(storeId: string): Promise<NeedsRequest[]>;
+  createNeedsRequest(request: InsertNeedsRequest, createdBy?: string): Promise<NeedsRequest>;
+  updateNeedsRequestStatus(id: string, status: string): Promise<NeedsRequest | undefined>;
+  deleteNeedsRequest(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -359,7 +377,7 @@ export class DatabaseStorage implements IStorage {
 
   async createDelivery(delivery: InsertDelivery, createdBy?: string): Promise<Delivery> {
     const productionStoreId = await this.getProductionCenterStoreId();
-    const quantity = delivery.quantitySent || 0;
+    const quantity = Number(delivery.quantitySent) || 0;
     
     // Deduct from production center inventory
     await this.updateInventoryStock(
@@ -473,7 +491,7 @@ export class DatabaseStorage implements IStorage {
     
     for (const product of allProducts) {
       const latestEntry = await this.getLatestInventoryByProduct(product.id, storeId);
-      inventoryLevels.set(product.id, latestEntry?.quantityInStock || 0);
+      inventoryLevels.set(product.id, Number(latestEntry?.quantityInStock) || 0);
     }
     
     return inventoryLevels;
@@ -482,15 +500,15 @@ export class DatabaseStorage implements IStorage {
   async recordProduction(entry: InsertInventory): Promise<Inventory> {
     const productionStoreId = await this.getProductionCenterStoreId();
     const latestEntry = await this.getLatestInventoryByProduct(entry.productId, productionStoreId);
-    const currentStock = latestEntry?.quantityInStock || 0;
-    const quantityProduced = entry.quantityProduced || 0;
+    const currentStock = Number(latestEntry?.quantityInStock) || 0;
+    const quantityProduced = Number(entry.quantityProduced) || 0;
     const newStock = currentStock + quantityProduced;
     
     const result = await db.insert(inventory).values({
       ...entry,
       storeId: productionStoreId,
-      quantityProduced,
-      quantityInStock: newStock,
+      quantityProduced: String(quantityProduced),
+      quantityInStock: String(newStock),
     }).returning();
     
     return result[0];
@@ -499,7 +517,7 @@ export class DatabaseStorage implements IStorage {
   async updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string): Promise<void> {
     const targetStoreId = storeId || await this.getProductionCenterStoreId();
     const latestEntry = await this.getLatestInventoryByProduct(productId, targetStoreId);
-    const currentStock = latestEntry?.quantityInStock || 0;
+    const currentStock = Number(latestEntry?.quantityInStock) || 0;
     const newStock = currentStock + quantity;
     
     // Prevent negative inventory
@@ -515,15 +533,15 @@ export class DatabaseStorage implements IStorage {
       date: today,
       productId,
       storeId: targetStoreId,
-      quantityInStock: newStock,
-      quantityProduced: 0,
+      quantityInStock: String(newStock),
+      quantityProduced: "0",
       notes: notes || `Inventory adjustment: ${quantity > 0 ? '+' : ''}${quantity}`,
     });
   }
 
   async addInventoryToStore(productId: string, storeId: string, quantity: number, notes?: string): Promise<void> {
     const latestEntry = await this.getLatestInventoryByProduct(productId, storeId);
-    const currentStock = latestEntry?.quantityInStock || 0;
+    const currentStock = Number(latestEntry?.quantityInStock) || 0;
     const newStock = currentStock + quantity;
     
     const today = new Date().toISOString().split('T')[0];
@@ -532,8 +550,8 @@ export class DatabaseStorage implements IStorage {
       date: today,
       productId,
       storeId,
-      quantityInStock: newStock,
-      quantityProduced: 0,
+      quantityInStock: String(newStock),
+      quantityProduced: "0",
       notes: notes || `Delivery received: +${quantity}`,
     });
   }
@@ -624,7 +642,7 @@ export class DatabaseStorage implements IStorage {
       name: data.name,
       storeId: data.storeId,
       productId: data.productId,
-      defaultQuantity: data.defaultQuantity,
+      defaultQuantity: String(data.defaultQuantity),
       frequency: data.frequency || 'daily',
       createdBy,
     }).returning();
@@ -633,6 +651,68 @@ export class DatabaseStorage implements IStorage {
 
   async deletePredeterminedDelivery(id: string): Promise<void> {
     await db.delete(predeterminedDeliveries).where(eq(predeterminedDeliveries.id, id));
+  }
+
+  // User Permissions
+  async getUserPermissions(userId: string): Promise<UserPermission[]> {
+    return await db.select().from(userPermissions).where(eq(userPermissions.userId, userId));
+  }
+
+  async setUserPermission(userId: string, pagePath: string, allowed: boolean, createdBy?: string): Promise<UserPermission> {
+    // First check if permission already exists
+    const existing = await db.select().from(userPermissions)
+      .where(and(eq(userPermissions.userId, userId), eq(userPermissions.pagePath, pagePath)))
+      .limit(1);
+    
+    if (existing[0]) {
+      // Update existing permission
+      const result = await db.update(userPermissions)
+        .set({ allowed: allowed ? 1 : 0, updatedAt: new Date() })
+        .where(eq(userPermissions.id, existing[0].id))
+        .returning();
+      return result[0];
+    } else {
+      // Create new permission
+      const result = await db.insert(userPermissions).values({
+        userId,
+        pagePath,
+        allowed: allowed ? 1 : 0,
+        createdBy,
+      }).returning();
+      return result[0];
+    }
+  }
+
+  async deleteUserPermissions(userId: string): Promise<void> {
+    await db.delete(userPermissions).where(eq(userPermissions.userId, userId));
+  }
+
+  // Needs Requests
+  async getAllNeedsRequests(): Promise<NeedsRequest[]> {
+    return await db.select().from(needsRequests).orderBy(desc(needsRequests.createdAt));
+  }
+
+  async getNeedsRequestsByStore(storeId: string): Promise<NeedsRequest[]> {
+    return await db.select().from(needsRequests)
+      .where(eq(needsRequests.storeId, storeId))
+      .orderBy(desc(needsRequests.createdAt));
+  }
+
+  async createNeedsRequest(request: InsertNeedsRequest, createdBy?: string): Promise<NeedsRequest> {
+    const result = await db.insert(needsRequests).values({ ...request, createdBy }).returning();
+    return result[0];
+  }
+
+  async updateNeedsRequestStatus(id: string, status: string): Promise<NeedsRequest | undefined> {
+    const result = await db.update(needsRequests)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(needsRequests.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteNeedsRequest(id: string): Promise<void> {
+    await db.delete(needsRequests).where(eq(needsRequests.id, id));
   }
 }
 
