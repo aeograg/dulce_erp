@@ -129,6 +129,8 @@ export type Inventory = typeof inventory.$inferSelect;
 
 export const predeterminedDeliveries = pgTable("predetermined_deliveries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull(),
+  name: text("name").notNull(),
   storeId: varchar("store_id").notNull().references(() => stores.id, { onDelete: "cascade" }),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
   defaultQuantity: integer("default_quantity").notNull(),

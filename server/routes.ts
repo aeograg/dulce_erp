@@ -473,14 +473,15 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/predetermined-deliveries", requireRole("Admin", "Manager"), async (req, res) => {
     try {
-      const { storeId, products } = req.body;
+      const { templateName, storeId, products } = req.body;
       
-      if (!storeId || !Array.isArray(products) || products.length === 0) {
+      if (!templateName || !storeId || !Array.isArray(products) || products.length === 0) {
         return res.status(400).json({ 
-          error: "Missing storeId or products array" 
+          error: "Missing templateName, storeId, or products array" 
         });
       }
       
+      const templateId = Math.random().toString(36).substring(7);
       const savedTemplates = [];
       const errors = [];
       
@@ -489,6 +490,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         
         try {
           const template = await storage.createPredeterminedDelivery({
+            templateId,
+            name: templateName,
             storeId,
             productId,
             defaultQuantity,

@@ -91,7 +91,7 @@ export interface IStorage {
   // Predetermined Deliveries
   getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>>;
   getAllPredeterminedDeliveries(): Promise<any[]>;
-  createPredeterminedDelivery(data: { storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery>;
+  createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery>;
   deletePredeterminedDelivery(id: string): Promise<void>;
   
   // Sales
@@ -586,6 +586,8 @@ export class DatabaseStorage implements IStorage {
   async getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>> {
     const results = await db.select({
       id: predeterminedDeliveries.id,
+      templateId: predeterminedDeliveries.templateId,
+      name: predeterminedDeliveries.name,
       storeId: predeterminedDeliveries.storeId,
       productId: predeterminedDeliveries.productId,
       defaultQuantity: predeterminedDeliveries.defaultQuantity,
@@ -601,6 +603,8 @@ export class DatabaseStorage implements IStorage {
   async getAllPredeterminedDeliveries(): Promise<any[]> {
     const results = await db.select({
       id: predeterminedDeliveries.id,
+      templateId: predeterminedDeliveries.templateId,
+      name: predeterminedDeliveries.name,
       storeId: predeterminedDeliveries.storeId,
       productId: predeterminedDeliveries.productId,
       defaultQuantity: predeterminedDeliveries.defaultQuantity,
@@ -614,8 +618,10 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async createPredeterminedDelivery(data: { storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery> {
+  async createPredeterminedDelivery(data: { templateId: string; name: string; storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery> {
     const result = await db.insert(predeterminedDeliveries).values({
+      templateId: data.templateId,
+      name: data.name,
       storeId: data.storeId,
       productId: data.productId,
       defaultQuantity: data.defaultQuantity,

@@ -24,16 +24,15 @@ import {
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 
-interface ProductQuantity {
-  productId: string;
-  productName: string;
-  quantity: number;
-}
-
-interface PredeterminedItem {
-  productId: string;
-  productName: string;
-  defaultQuantity: number;
+interface TemplateGroup {
+  templateId: string;
+  name: string;
+  items: Array<{
+    id: string;
+    productId: string;
+    productName: string;
+    defaultQuantity: number;
+  }>;
 }
 
 export default function Deliveries() {
@@ -44,13 +43,16 @@ export default function Deliveries() {
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
   
-  const [predeterminedModalOpen, setPredeterminedModalOpen] = useState(false);
-  const [predeterminedStore, setPredeterminedStore] = useState<string>("");
-  const [predeterminedQuantities, setPredeterminedQuantities] = useState<Record<string, number>>({});
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateStore, setTemplateStore] = useState<string>("");
+  const [templateName, setTemplateName] = useState("");
+  const [templateQuantities, setTemplateQuantities] = useState<Record<string, number>>({});
   
-  const [executeTemplateModalOpen, setExecuteTemplateModalOpen] = useState(false);
+  const [viewTemplatesStore, setViewTemplatesStore] = useState<string>("");
+  const [executeModalOpen, setExecuteModalOpen] = useState(false);
+  const [executeTemplateId, setExecuteTemplateId] = useState<string>("");
   const [executeDate, setExecuteDate] = useState(today);
-  const [executeTemplateQuantities, setExecuteTemplateQuantities] = useState<Record<string, number>>({});
+  const [executeQuantities, setExecuteQuantities] = useState<Record<string, number>>({});
 
   const { data: stores = [], isLoading: storesLoading } = useQuery<any[]>({
     queryKey: ["/api/stores"],
@@ -68,10 +70,26 @@ export default function Deliveries() {
     queryKey: ["/api/inventory/current"],
   });
 
-  const { data: predeterminedDeliveries = [] } = useQuery<any[]>({
-    queryKey: [predeterminedStore ? `/api/predetermined-deliveries?storeId=${predeterminedStore}` : "/api/predetermined-deliveries"],
-    enabled: !!predeterminedStore,
+  const { data: allTemplates = [] } = useQuery<any[]>({
+    queryKey: [viewTemplatesStore ? `/api/predetermined-deliveries?storeId=${viewTemplatesStore}` : "/api/predetermined-deliveries"],
+    enabled: !!viewTemplatesStore,
   });
+
+  // Group templates by templateId and name
+  const templateGroups: TemplateGroup[] = Array.from(
+    allTemplates.reduce((map, template) => {
+      const key = template.templateId;
+      if (!map.has(key)) {
+        map.set(key, {
+          templateId: template.templateId,
+          name: template.name,
+          items: [],
+        });
+      }
+      map.get(key)!.items.push(template);
+      return map;
+    }, new Map<string, TemplateGroup>()).values()
+  );
 
   const saveMutation = useMutation({
     mutationFn: async (deliveryData: any[]) => {
@@ -108,36 +126,37 @@ export default function Deliveries() {
     },
   });
 
-  const savePredeterminedMutation = useMutation({
-    mutationFn: async (data: { storeId: string; products: Array<{ productId: string; defaultQuantity: number }> }) => {
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (data: { templateName: string; storeId: string; products: Array<{ productId: string; defaultQuantity: number }> }) => {
       return await apiRequest("POST", "/api/predetermined-deliveries", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/predetermined-deliveries", predeterminedStore] });
-      toast({ title: "Delivery template saved successfully" });
-      setPredeterminedModalOpen(false);
-      setPredeterminedStore("");
-      setPredeterminedQuantities({});
+      queryClient.invalidateQueries({ queryKey: [viewTemplatesStore ? `/api/predetermined-deliveries?storeId=${viewTemplatesStore}` : "/api/predetermined-deliveries"] });
+      toast({ title: "Template saved successfully" });
+      setTemplateModalOpen(false);
+      setTemplateName("");
+      setTemplateQuantities({});
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to save delivery template",
+        title: "Failed to save template",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const executeTemplateMutation = useMutation({
+  const executeDeliveryMutation = useMutation({
     mutationFn: async (data: { date: string; storeId: string; products: Array<{ productId: string; quantity: number }> }) => {
       return await apiRequest("POST", "/api/deliveries/predetermined", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deliveries"] });
       toast({ title: "Delivery executed successfully" });
-      setExecuteTemplateModalOpen(false);
+      setExecuteModalOpen(false);
+      setExecuteTemplateId("");
       setExecuteDate(today);
-      setExecuteTemplateQuantities({});
+      setExecuteQuantities({});
     },
     onError: (error: any) => {
       toast({
@@ -196,8 +215,8 @@ export default function Deliveries() {
     saveMutation.mutate(deliveryData);
   };
 
-  const handleSavePredeterminedTemplate = () => {
-    if (!predeterminedStore) {
+  const handleSaveTemplate = () => {
+    if (!templateStore) {
       toast({
         title: "Please select a store",
         variant: "destructive",
@@ -205,7 +224,15 @@ export default function Deliveries() {
       return;
     }
 
-    const productsToSave = Object.entries(predeterminedQuantities)
+    if (!templateName.trim()) {
+      toast({
+        title: "Please enter a template name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const productsToSave = Object.entries(templateQuantities)
       .filter(([_, quantity]) => quantity > 0)
       .map(([productId, quantity]) => ({
         productId,
@@ -220,59 +247,29 @@ export default function Deliveries() {
       return;
     }
 
-    savePredeterminedMutation.mutate({
-      storeId: predeterminedStore,
+    saveTemplateMutation.mutate({
+      templateName: templateName.trim(),
+      storeId: templateStore,
       products: productsToSave,
     });
   };
 
-  const handleQuantityChange = (productId: string, value: string) => {
-    const quantity = Math.max(0, parseInt(value) || 0);
-    setProductQuantities(prev => ({
-      ...prev,
-      [productId]: quantity,
-    }));
-  };
-
-  const handlePredeterminedQuantityChange = (productId: string, value: string) => {
-    const quantity = Math.max(0, parseInt(value) || 0);
-    setPredeterminedQuantities(prev => ({
-      ...prev,
-      [productId]: quantity,
-    }));
-  };
-
-  const handlePredeterminedModalOpen = (open: boolean) => {
-    setPredeterminedModalOpen(open);
-    if (open) {
-      // Reset quantities when opening modal
-      setPredeterminedQuantities({});
-    }
-  };
-
-  const handleExecuteTemplate = (template: any) => {
+  const handleExecuteTemplate = (templateGroup: TemplateGroup) => {
     // Initialize quantities with template defaults
     const initialQuantities: Record<string, number> = {};
-    predeterminedDeliveries.forEach((item: any) => {
+    templateGroup.items.forEach((item: any) => {
       initialQuantities[item.productId] = item.defaultQuantity;
     });
-    setExecuteTemplateQuantities(initialQuantities);
+    setExecuteQuantities(initialQuantities);
+    setExecuteTemplateId(templateGroup.templateId);
     setExecuteDate(today);
-    setExecuteTemplateModalOpen(true);
-  };
-
-  const handleExecuteQuantityChange = (productId: string, value: string) => {
-    const quantity = Math.max(0, parseInt(value) || 0);
-    setExecuteTemplateQuantities(prev => ({
-      ...prev,
-      [productId]: quantity,
-    }));
+    setExecuteModalOpen(true);
   };
 
   const handleExecuteDelivery = () => {
-    if (!predeterminedStore) return;
+    if (!viewTemplatesStore) return;
 
-    const productsToDeliver = Object.entries(executeTemplateQuantities)
+    const productsToDeliver = Object.entries(executeQuantities)
       .filter(([_, quantity]) => quantity > 0)
       .map(([productId, quantity]) => ({
         productId,
@@ -287,11 +284,43 @@ export default function Deliveries() {
       return;
     }
 
-    executeTemplateMutation.mutate({
+    executeDeliveryMutation.mutate({
       date: executeDate,
-      storeId: predeterminedStore,
+      storeId: viewTemplatesStore,
       products: productsToDeliver,
     });
+  };
+
+  const handleQuantityChange = (productId: string, value: string) => {
+    const quantity = Math.max(0, parseInt(value) || 0);
+    setProductQuantities(prev => ({
+      ...prev,
+      [productId]: quantity,
+    }));
+  };
+
+  const handleTemplateQuantityChange = (productId: string, value: string) => {
+    const quantity = Math.max(0, parseInt(value) || 0);
+    setTemplateQuantities(prev => ({
+      ...prev,
+      [productId]: quantity,
+    }));
+  };
+
+  const handleExecuteQuantityChange = (productId: string, value: string) => {
+    const quantity = Math.max(0, parseInt(value) || 0);
+    setExecuteQuantities(prev => ({
+      ...prev,
+      [productId]: quantity,
+    }));
+  };
+
+  const handleTemplateModalOpen = (open: boolean) => {
+    setTemplateModalOpen(open);
+    if (open) {
+      setTemplateName("");
+      setTemplateQuantities({});
+    }
   };
 
   if (!storesLoading && !productsLoading) {
@@ -428,23 +457,19 @@ export default function Deliveries() {
               <CardHeader>
                 <CardTitle>Delivery Templates</CardTitle>
                 <CardDescription>
-                  Create templates and execute recurring store deliveries
+                  View and execute saved delivery templates
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="template-store">Select Store to View Templates</Label>
+                    <Label htmlFor="view-store">Select Store</Label>
                     <Select
-                      value={predeterminedStore}
-                      onValueChange={(storeId) => {
-                        setPredeterminedStore(storeId);
-                        setExecuteDate(today);
-                        setExecuteTemplateQuantities({});
-                      }}
+                      value={viewTemplatesStore}
+                      onValueChange={setViewTemplatesStore}
                     >
-                      <SelectTrigger id="template-store" data-testid="select-template-store">
-                        <SelectValue placeholder="Select store" />
+                      <SelectTrigger id="view-store" data-testid="select-view-templates-store">
+                        <SelectValue placeholder="Select store to view templates" />
                       </SelectTrigger>
                       <SelectContent>
                         {stores.map((store) => (
@@ -456,40 +481,34 @@ export default function Deliveries() {
                     </Select>
                   </div>
 
-                  {predeterminedStore && (
+                  {viewTemplatesStore && (
                     <div className="space-y-2">
-                      <Label>Saved Templates</Label>
-                      {predeterminedDeliveries.length === 0 ? (
+                      <Label>Templates</Label>
+                      {templateGroups.length === 0 ? (
                         <p className="text-sm text-muted-foreground p-3 border rounded-md text-center">
                           No templates saved for this store
                         </p>
                       ) : (
                         <div className="space-y-2">
-                          {predeterminedDeliveries.map((template: any) => (
+                          {templateGroups.map((templateGroup) => (
                             <div
-                              key={template.id}
+                              key={templateGroup.templateId}
                               className="flex items-center justify-between p-3 border rounded-md hover-elevate cursor-pointer"
-                              data-testid={`template-${template.id}`}
+                              data-testid={`template-${templateGroup.templateId}`}
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium" data-testid={`template-product-${template.id}`}>
-                                  {template.productName}
+                                <p className="text-sm font-medium" data-testid={`template-name-${templateGroup.templateId}`}>
+                                  {templateGroup.name}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  Default: {template.defaultQuantity} units
+                                  {templateGroup.items.length} product{templateGroup.items.length !== 1 ? 's' : ''}
                                 </p>
                               </div>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setExecuteTemplateQuantities({
-                                    [template.productId]: template.defaultQuantity,
-                                  });
-                                  setExecuteDate(today);
-                                  setExecuteTemplateModalOpen(true);
-                                }}
-                                data-testid={`button-execute-template-${template.id}`}
+                                onClick={() => handleExecuteTemplate(templateGroup)}
+                                data-testid={`button-execute-${templateGroup.templateId}`}
                               >
                                 Execute
                               </Button>
@@ -500,20 +519,20 @@ export default function Deliveries() {
                     </div>
                   )}
 
-                  <Dialog open={executeTemplateModalOpen} onOpenChange={setExecuteTemplateModalOpen}>
+                  <Dialog open={executeModalOpen} onOpenChange={setExecuteModalOpen}>
                     <DialogContent className="max-w-xl">
                       <DialogHeader>
                         <DialogTitle>Execute Delivery Template</DialogTitle>
                         <DialogDescription>
-                          Edit quantities and confirm delivery date
+                          Review and edit quantities before executing
                         </DialogDescription>
                       </DialogHeader>
 
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="execute-date">Delivery Date</Label>
+                          <Label htmlFor="exec-date">Delivery Date</Label>
                           <Input
-                            id="execute-date"
+                            id="exec-date"
                             type="date"
                             value={executeDate}
                             onChange={(e) => setExecuteDate(e.target.value)}
@@ -529,7 +548,7 @@ export default function Deliveries() {
                               <div className="text-center">Available</div>
                               <div className="text-center">Quantity</div>
                             </div>
-                            {Object.entries(executeTemplateQuantities).map(([productId, quantity]) => {
+                            {Object.entries(executeQuantities).map(([productId, quantity]) => {
                               const product = products.find(p => p.id === productId);
                               const availableStock = currentInventory[productId] || 0;
                               const exceedsStock = quantity > availableStock;
@@ -558,13 +577,13 @@ export default function Deliveries() {
                         <Button
                           onClick={handleExecuteDelivery}
                           className="w-full"
-                          disabled={executeTemplateMutation.isPending}
+                          disabled={executeDeliveryMutation.isPending}
                           data-testid="button-execute-delivery"
                         >
-                          {executeTemplateMutation.isPending ? (
+                          {executeDeliveryMutation.isPending ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Processing...
+                              Executing...
                             </>
                           ) : (
                             "Execute Delivery"
@@ -581,11 +600,11 @@ export default function Deliveries() {
               <CardHeader>
                 <CardTitle>Create New Template</CardTitle>
                 <CardDescription>
-                  Save new product quantities as a template
+                  Save product quantities as a named template
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Dialog open={predeterminedModalOpen} onOpenChange={handlePredeterminedModalOpen}>
+                <Dialog open={templateModalOpen} onOpenChange={handleTemplateModalOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full" data-testid="button-create-template">
                       + Create Template
@@ -595,18 +614,29 @@ export default function Deliveries() {
                     <DialogHeader>
                       <DialogTitle>Create Delivery Template</DialogTitle>
                       <DialogDescription>
-                        Save product quantities as a template for recurring deliveries to this store
+                        Give this template a name and set default quantities
                       </DialogDescription>
                     </DialogHeader>
                     
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="pred-store">Store</Label>
+                        <Label htmlFor="template-name">Template Name</Label>
+                        <Input
+                          id="template-name"
+                          placeholder="e.g., Monday Delivery"
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          data-testid="input-template-name"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="create-store">Store</Label>
                         <Select
-                          value={predeterminedStore}
-                          onValueChange={setPredeterminedStore}
+                          value={templateStore}
+                          onValueChange={setTemplateStore}
                         >
-                          <SelectTrigger id="pred-store" data-testid="select-predetermined-store">
+                          <SelectTrigger id="create-store" data-testid="select-create-template-store">
                             <SelectValue placeholder="Select store" />
                           </SelectTrigger>
                           <SelectContent>
@@ -619,11 +649,11 @@ export default function Deliveries() {
                         </Select>
                       </div>
 
-                      {predeterminedStore && (
+                      {templateStore && (
                         <div className="space-y-2">
                           <Label>Product Quantities</Label>
                           <p className="text-xs text-muted-foreground">
-                            Set default quantities for products you want to deliver to this store regularly
+                            Set default quantities for products in this template
                           </p>
                           <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
                             <div className="grid grid-cols-[2fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
@@ -642,17 +672,17 @@ export default function Deliveries() {
                               <>
                                 {products.map((product) => (
                                   <div key={product.id} className="grid grid-cols-[2fr_1fr] gap-4 items-center">
-                                    <Label className="text-sm" htmlFor={`pred-qty-${product.id}`}>
+                                    <Label className="text-sm" htmlFor={`tpl-qty-${product.id}`}>
                                       {product.name}
                                     </Label>
                                     <Input
-                                      id={`pred-qty-${product.id}`}
+                                      id={`tpl-qty-${product.id}`}
                                       type="number"
                                       min="0"
-                                      value={predeterminedQuantities[product.id] || ""}
-                                      onChange={(e) => handlePredeterminedQuantityChange(product.id, e.target.value)}
+                                      value={templateQuantities[product.id] || ""}
+                                      onChange={(e) => handleTemplateQuantityChange(product.id, e.target.value)}
                                       placeholder="0"
-                                      data-testid={`input-predetermined-quantity-${product.id}`}
+                                      data-testid={`input-template-quantity-${product.id}`}
                                     />
                                   </div>
                                 ))}
@@ -663,12 +693,12 @@ export default function Deliveries() {
                       )}
 
                       <Button
-                        onClick={handleSavePredeterminedTemplate}
+                        onClick={handleSaveTemplate}
                         className="w-full"
-                        disabled={savePredeterminedMutation.isPending || !predeterminedStore}
+                        disabled={saveTemplateMutation.isPending || !templateStore || !templateName.trim()}
                         data-testid="button-save-template"
                       >
-                        {savePredeterminedMutation.isPending ? (
+                        {saveTemplateMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Saving...
