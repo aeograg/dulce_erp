@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
 - **StockEntries:** Daily stock tracking including staff-entered data (currentStock, waste), auto-calculated values (expectedRemaining, discrepancy), and sales data.
 - **Sales:** Separate sales tracking table with date, store, product, quantity, unit price.
 - **Deliveries:** Records of delivered quantities.
-- **Inventory:** Production center inventory tracking with quantityInStock and quantityProduced.
+- **Inventory:** Store-specific inventory tracking with storeId column, supporting both production center and individual store inventories. Includes quantityInStock, quantityProduced, and automatic inventory updates on deliveries.
 **Data Validation:** Zod schemas for runtime validation and Drizzle schema validation for database constraints, along with react-hook-form for frontend validation.
 **Seeding Strategy:** Default users, pre-configured stores, sample products, and ingredients.
 
@@ -46,10 +46,10 @@ Preferred communication style: Simple, everyday language.
 - **User Management:** Admin-only CRUD with store assignments.
 - **Two-Stage Stock Entry:** Staff enters current stock/waste; Admin/Manager enters sales and delivery data.
 - **Sales Data Entry Module:** Form-based daily sales entry, updates stock entries.
-- **Delivery Module:** Form-based delivery entry, saves to `deliveries` table, and automatically deducts from production center inventory while updating store stock entries. Includes validation for insufficient inventory.
+- **Delivery Module:** Form-based delivery entry, saves to `deliveries` table, automatically deducts from production center inventory AND adds to target store inventory, with validation for insufficient inventory.
 - **Stock Control Module:** Comprehensive table view of all stock entries with delivered, current stock, waste, sales, expected remaining, and discrepancy %. Features filters, summary statistics, and color-coded discrepancy badges.
 - **Remaining Stock Dashboard:** Real-time stock level monitoring across stores, displaying latest stock entry per product, low stock alerts, and grouped by store.
-- **Inventory Module:** Production center inventory management with production entry, current stock levels, and auto-deduction for deliveries.
+- **Inventory Module:** Store-specific inventory management with store selector dropdown (Admin/Manager only), production entry at Delahey production center, summary cards (total items, products, value), and auto-deduction/addition for deliveries between production center and stores.
 - **Waste Management System:** `maxWastePercent` field in Product model, real-time waste percentage calculation, visual warnings, and color-coded validation.
 - **Stock Entry Duplicate Prevention:** Server-side validation to prevent duplicate entries for the same date, product, and store.
 
