@@ -423,51 +423,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const deliveryData = insertDeliverySchema.parse(req.body);
       
-      // Auto-deduct from inventory when delivery is sent
-      const quantitySent = deliveryData.quantitySent || 0;
-      if (quantitySent > 0) {
-        try {
-          await storage.updateInventoryStock(
-            deliveryData.productId,
-            -quantitySent,
-            `Delivery to store ${deliveryData.storeId}`
-          );
-        } catch (inventoryError: any) {
-          return res.status(400).json({ 
-            error: `Inventory error: ${inventoryError.message}` 
-          });
-        }
-        
-        // Update target store's stock entry with delivered quantity
-        // Check if stock entry exists for this date/product/store
-        const existingStockEntry = await storage.getStockEntryByDateProductStore(
-          deliveryData.date,
-          deliveryData.productId,
-          deliveryData.storeId
-        );
-        
-        if (existingStockEntry) {
-          // Update existing entry's delivered field
-          await storage.updateStockEntry(existingStockEntry.id, {
-            delivered: (existingStockEntry.delivered || 0) + quantitySent
-          });
-        } else {
-          // Create new stock entry with delivered quantity
-          await storage.createStockEntry({
-            date: deliveryData.date,
-            storeId: deliveryData.storeId,
-            productId: deliveryData.productId,
-            reportedStock: 0,
-            waste: 0,
-            sales: 0,
-            delivered: quantitySent,
-            expectedStock: quantitySent,
-            reportedRemaining: 0,
-            discrepancy: 0,
-          });
-        }
-      }
-      
+      // createDelivery handles all inventory operations:
+      // 1. Deducts from production center inventory
+      // 2. Adds to target store inventory
       const delivery = await storage.createDelivery(deliveryData);
       res.status(201).json(delivery);
     } catch (error: any) {
