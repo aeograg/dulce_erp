@@ -94,12 +94,15 @@ export interface IStorage {
   createSale(sale: InsertSale): Promise<Sale>;
   
   // Inventory
-  getAllInventory(): Promise<Inventory[]>;
-  getInventoryByProduct(productId: string): Promise<Inventory[]>;
-  getLatestInventoryByProduct(productId: string): Promise<Inventory | undefined>;
-  getCurrentInventoryLevels(): Promise<Map<string, number>>;
+  getAllInventory(storeId?: string): Promise<Inventory[]>;
+  getInventoryByProduct(productId: string, storeId?: string): Promise<Inventory[]>;
+  getInventoryByStore(storeId: string): Promise<Inventory[]>;
+  getLatestInventoryByProduct(productId: string, storeId?: string): Promise<Inventory | undefined>;
+  getCurrentInventoryLevels(storeId?: string): Promise<Map<string, number>>;
   recordProduction(entry: InsertInventory): Promise<Inventory>;
-  updateInventoryStock(productId: string, quantity: number, notes?: string): Promise<void>;
+  updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string): Promise<void>;
+  addInventoryToStore(productId: string, storeId: string, quantity: number, notes?: string): Promise<void>;
+  getProductionCenterStoreId(): Promise<string>;
   
   // Analytics
   getProductsWithLowStock(): Promise<Array<Product & { currentStock: number }>>;
@@ -347,6 +350,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDelivery(delivery: InsertDelivery): Promise<Delivery> {
+    const productionStoreId = await this.getProductionCenterStoreId();
+    const quantity = delivery.quantitySent || 0;
+    
+    // Deduct from production center inventory
+    await this.updateInventoryStock(
+      delivery.productId, 
+      -quantity, 
+      productionStoreId, 
+      `Delivery to store: -${quantity}`
+    );
+    
+    // Add to target store inventory
+    await this.addInventoryToStore(
+      delivery.productId,
+      delivery.storeId,
+      quantity,
+      `Delivery received: +${quantity}`
+    );
+    
+    // Create delivery record
     const result = await db.insert(deliveries).values(delivery).returning();
     return result[0];
   }
@@ -385,17 +408,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Inventory
-  async getAllInventory(): Promise<Inventory[]> {
+  async getProductionCenterStoreId(): Promise<string> {
+    const result = await db.select().from(stores)
+      .where(eq(stores.name, "Delahey"))
+      .limit(1);
+    if (!result[0]) {
+      throw new Error("Production center store (Delahey) not found");
+    }
+    return result[0].id;
+  }
+
+  async getAllInventory(storeId?: string): Promise<Inventory[]> {
+    if (storeId) {
+      return await db.select().from(inventory)
+        .where(eq(inventory.storeId, storeId))
+        .orderBy(desc(inventory.date));
+    }
     return await db.select().from(inventory).orderBy(desc(inventory.date));
   }
 
-  async getInventoryByProduct(productId: string): Promise<Inventory[]> {
+  async getInventoryByStore(storeId: string): Promise<Inventory[]> {
+    return await db.select().from(inventory)
+      .where(eq(inventory.storeId, storeId))
+      .orderBy(desc(inventory.date));
+  }
+
+  async getInventoryByProduct(productId: string, storeId?: string): Promise<Inventory[]> {
+    if (storeId) {
+      return await db.select().from(inventory)
+        .where(and(eq(inventory.productId, productId), eq(inventory.storeId, storeId)))
+        .orderBy(desc(inventory.date));
+    }
     return await db.select().from(inventory)
       .where(eq(inventory.productId, productId))
       .orderBy(desc(inventory.date));
   }
 
-  async getLatestInventoryByProduct(productId: string): Promise<Inventory | undefined> {
+  async getLatestInventoryByProduct(productId: string, storeId?: string): Promise<Inventory | undefined> {
+    if (storeId) {
+      const result = await db.select().from(inventory)
+        .where(and(eq(inventory.productId, productId), eq(inventory.storeId, storeId)))
+        .orderBy(desc(inventory.createdAt))
+        .limit(1);
+      return result[0];
+    }
     const result = await db.select().from(inventory)
       .where(eq(inventory.productId, productId))
       .orderBy(desc(inventory.createdAt))
@@ -403,12 +459,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCurrentInventoryLevels(): Promise<Map<string, number>> {
+  async getCurrentInventoryLevels(storeId?: string): Promise<Map<string, number>> {
     const allProducts = await this.getAllProducts();
     const inventoryLevels = new Map<string, number>();
     
     for (const product of allProducts) {
-      const latestEntry = await this.getLatestInventoryByProduct(product.id);
+      const latestEntry = await this.getLatestInventoryByProduct(product.id, storeId);
       inventoryLevels.set(product.id, latestEntry?.quantityInStock || 0);
     }
     
@@ -416,13 +472,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async recordProduction(entry: InsertInventory): Promise<Inventory> {
-    const latestEntry = await this.getLatestInventoryByProduct(entry.productId);
+    const productionStoreId = await this.getProductionCenterStoreId();
+    const latestEntry = await this.getLatestInventoryByProduct(entry.productId, productionStoreId);
     const currentStock = latestEntry?.quantityInStock || 0;
     const quantityProduced = entry.quantityProduced || 0;
     const newStock = currentStock + quantityProduced;
     
     const result = await db.insert(inventory).values({
       ...entry,
+      storeId: productionStoreId,
       quantityProduced,
       quantityInStock: newStock,
     }).returning();
@@ -430,8 +488,9 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateInventoryStock(productId: string, quantity: number, notes?: string): Promise<void> {
-    const latestEntry = await this.getLatestInventoryByProduct(productId);
+  async updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string): Promise<void> {
+    const targetStoreId = storeId || await this.getProductionCenterStoreId();
+    const latestEntry = await this.getLatestInventoryByProduct(productId, targetStoreId);
     const currentStock = latestEntry?.quantityInStock || 0;
     const newStock = currentStock + quantity;
     
@@ -447,9 +506,27 @@ export class DatabaseStorage implements IStorage {
     await db.insert(inventory).values({
       date: today,
       productId,
+      storeId: targetStoreId,
       quantityInStock: newStock,
       quantityProduced: 0,
       notes: notes || `Inventory adjustment: ${quantity > 0 ? '+' : ''}${quantity}`,
+    });
+  }
+
+  async addInventoryToStore(productId: string, storeId: string, quantity: number, notes?: string): Promise<void> {
+    const latestEntry = await this.getLatestInventoryByProduct(productId, storeId);
+    const currentStock = latestEntry?.quantityInStock || 0;
+    const newStock = currentStock + quantity;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    await db.insert(inventory).values({
+      date: today,
+      productId,
+      storeId,
+      quantityInStock: newStock,
+      quantityProduced: 0,
+      notes: notes || `Delivery received: +${quantity}`,
     });
   }
 

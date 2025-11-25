@@ -82,6 +82,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
       req.session!.userId = user.id;
       req.session!.userRole = user.role;
+      req.session!.userStoreId = user.storeId || undefined;
 
       // Explicitly save session to database before responding
       await new Promise<void>((resolve, reject) => {
@@ -517,18 +518,47 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   // Inventory Routes
-  app.get("/api/inventory", requireRole("Admin", "Manager"), async (req, res) => {
+  app.get("/api/inventory/production-store", requireRole("Admin", "Manager"), async (req, res) => {
     try {
-      const allInventory = await storage.getAllInventory();
+      const storeId = await storage.getProductionCenterStoreId();
+      res.json({ storeId });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get production center store" });
+    }
+  });
+
+  app.get("/api/inventory", requireAuth, async (req, res) => {
+    try {
+      const storeId = req.query.storeId as string | undefined;
+      const userRole = req.session.userRole;
+      const userStoreId = req.session.userStoreId;
+      
+      // Staff can only see their assigned store inventory
+      let effectiveStoreId = storeId;
+      if (userRole === "Staff" && userStoreId) {
+        effectiveStoreId = userStoreId;
+      }
+      
+      const allInventory = await storage.getAllInventory(effectiveStoreId);
       res.json(allInventory);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch inventory" });
     }
   });
 
-  app.get("/api/inventory/current", requireRole("Admin", "Manager"), async (req, res) => {
+  app.get("/api/inventory/current", requireAuth, async (req, res) => {
     try {
-      const currentLevels = await storage.getCurrentInventoryLevels();
+      const storeId = req.query.storeId as string | undefined;
+      const userRole = req.session.userRole;
+      const userStoreId = req.session.userStoreId;
+      
+      // Staff can only see their assigned store inventory
+      let effectiveStoreId = storeId;
+      if (userRole === "Staff" && userStoreId) {
+        effectiveStoreId = userStoreId;
+      }
+      
+      const currentLevels = await storage.getCurrentInventoryLevels(effectiveStoreId);
       const levelsObject = Object.fromEntries(currentLevels);
       res.json(levelsObject);
     } catch (error) {
@@ -536,9 +566,19 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  app.get("/api/inventory/product/:productId", requireRole("Admin", "Manager"), async (req, res) => {
+  app.get("/api/inventory/product/:productId", requireAuth, async (req, res) => {
     try {
-      const inventoryHistory = await storage.getInventoryByProduct(req.params.productId);
+      const storeId = req.query.storeId as string | undefined;
+      const userRole = req.session.userRole;
+      const userStoreId = req.session.userStoreId;
+      
+      // Staff can only see their assigned store inventory
+      let effectiveStoreId = storeId;
+      if (userRole === "Staff" && userStoreId) {
+        effectiveStoreId = userStoreId;
+      }
+      
+      const inventoryHistory = await storage.getInventoryByProduct(req.params.productId, effectiveStoreId);
       res.json(inventoryHistory);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch product inventory" });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,30 +8,68 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Loader2, Package, CheckCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Package, CheckCircle, ArrowUpDown, ArrowUp, ArrowDown, Store, Factory } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 type SortField = "name" | "stock";
 type SortDirection = "asc" | "desc";
 
 export default function Inventory() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [quantityProduced, setQuantityProduced] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+
+  const isAdminOrManager = user?.role === "Admin" || user?.role === "Manager";
+
+  const { data: stores = [], isLoading: storesLoading } = useQuery<any[]>({
+    queryKey: ["/api/stores"],
+  });
+
+  const { data: productionStoreData } = useQuery<{ storeId: string }>({
+    queryKey: ["/api/inventory/production-store"],
+    enabled: isAdminOrManager,
+  });
+
+  const productionStoreId = productionStoreData?.storeId;
+
+  useEffect(() => {
+    if (productionStoreId && !selectedStoreId) {
+      setSelectedStoreId(productionStoreId);
+    }
+  }, [productionStoreId, selectedStoreId]);
 
   const { data: products = [], isLoading: productsLoading } = useQuery<any[]>({
     queryKey: ["/api/products"],
   });
 
   const { data: currentInventory = {}, isLoading: inventoryLoading } = useQuery<Record<string, number>>({
-    queryKey: ["/api/inventory/current"],
+    queryKey: ["/api/inventory/current", selectedStoreId],
+    queryFn: async () => {
+      const url = selectedStoreId 
+        ? `/api/inventory/current?storeId=${selectedStoreId}`
+        : "/api/inventory/current";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch inventory");
+      return response.json();
+    },
   });
 
   const { data: inventory = [], isLoading: inventoryHistoryLoading } = useQuery<any[]>({
-    queryKey: ["/api/inventory"],
+    queryKey: ["/api/inventory", selectedStoreId],
+    queryFn: async () => {
+      const url = selectedStoreId 
+        ? `/api/inventory?storeId=${selectedStoreId}`
+        : "/api/inventory";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch inventory");
+      return response.json();
+    },
   });
 
   const recordProductionMutation = useMutation({
@@ -99,12 +137,12 @@ export default function Inventory() {
   };
 
   const productMap = new Map(products.map((p: any) => [p.id, p.name]));
+  const storeMap = new Map(stores.map((s: any) => [s.id, s.name]));
 
   const recentProduction = inventory
     .filter((entry: any) => entry.quantityProduced > 0)
     .slice(0, 10);
 
-  // Get latest inventory entry date for each product
   const latestInventoryDates = new Map<string, string>();
   inventory.forEach((entry: any) => {
     const currentDate = latestInventoryDates.get(entry.productId);
@@ -113,7 +151,6 @@ export default function Inventory() {
     }
   });
 
-  // Create inventory list
   const inventoryList = products.map((product: any) => ({
     id: product.id,
     name: product.name,
@@ -121,10 +158,8 @@ export default function Inventory() {
     lastUpdated: latestInventoryDates.get(product.id) || "N/A",
   }));
 
-  // Filter out items with stock <= 0
   const filteredInventory = inventoryList.filter(item => item.stock > 0);
 
-  // Sort the filtered list
   const sortedInventory = [...filteredInventory].sort((a, b) => {
     let comparison = 0;
 
@@ -138,150 +173,223 @@ export default function Inventory() {
   });
 
   const isLoading = productsLoading || inventoryLoading;
+  const selectedStoreName = selectedStoreId ? storeMap.get(selectedStoreId) : "All Stores";
+  const isProductionCenter = selectedStoreId === productionStoreId;
+
+  const totalInventoryValue = sortedInventory.reduce((sum, item) => {
+    const product = products.find((p: any) => p.id === item.id);
+    return sum + (item.stock * (product?.unitCost || 0));
+  }, 0);
+
+  const totalItems = sortedInventory.reduce((sum, item) => sum + item.stock, 0);
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Inventory Management</h1>
-        <p className="text-muted-foreground mt-2">Manage production center inventory and production</p>
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Record Production
-            </CardTitle>
-            <CardDescription>Enter the quantity of products manufactured</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Production Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  data-testid="input-production-date"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product">Product</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger id="product" data-testid="select-product">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productsLoading ? (
-                      <SelectItem value="loading" disabled>Loading products...</SelectItem>
-                    ) : (
-                      products.map((product: any) => (
-                        <SelectItem key={product.id} value={product.id} data-testid={`option-product-${product.id}`}>
-                          {product.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity Produced</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={quantityProduced || ""}
-                  onChange={(e) => setQuantityProduced(parseInt(e.target.value) || 0)}
-                  placeholder="Enter quantity (must be > 0)"
-                  data-testid="input-quantity-produced"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any production notes..."
-                  rows={3}
-                  data-testid="input-notes"
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={recordProductionMutation.isPending}
-                data-testid="button-submit-production"
-              >
-                {recordProductionMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Recording...
-                  </>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Inventory Management</h1>
+          <p className="text-muted-foreground mt-2">
+            {isProductionCenter ? "Manage production center inventory and production" : `View ${selectedStoreName} inventory`}
+          </p>
+        </div>
+        
+        {isAdminOrManager && (
+          <div className="flex items-center gap-2">
+            <Store className="w-5 h-5 text-muted-foreground" />
+            <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
+              <SelectTrigger className="w-[200px]" data-testid="select-store-filter">
+                <SelectValue placeholder="Select store" />
+              </SelectTrigger>
+              <SelectContent>
+                {storesLoading ? (
+                  <SelectItem value="loading" disabled>Loading...</SelectItem>
                 ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Record Production
-                  </>
+                  stores.map((store: any) => (
+                    <SelectItem key={store.id} value={store.id} data-testid={`option-store-${store.id}`}>
+                      {store.id === productionStoreId && <Factory className="w-4 h-4 inline mr-1" />}
+                      {store.name}
+                      {store.id === productionStoreId && " (Production)"}
+                    </SelectItem>
+                  ))
                 )}
-              </Button>
-            </form>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-total-items">{totalItems}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Production</CardTitle>
-            <CardDescription>Last 10 production entries</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Products with Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            {inventoryHistoryLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
-            ) : recentProduction.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8" data-testid="text-no-production">
-                No production recorded yet
-              </p>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {recentProduction.map((entry: any) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between p-3 bg-card border rounded-md"
-                    data-testid={`production-entry-${entry.id}`}
-                  >
-                    <div>
-                      <p className="font-medium text-foreground" data-testid={`product-${entry.id}`}>
-                        {productMap.get(entry.productId) || "Unknown"}
-                      </p>
-                      <p className="text-sm text-muted-foreground" data-testid={`date-${entry.id}`}>
-                        {entry.date}
-                      </p>
-                      {entry.notes && (
-                        <p className="text-sm text-muted-foreground italic mt-1">{entry.notes}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-foreground" data-testid={`quantity-${entry.id}`}>
-                        +{entry.quantityProduced}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Stock: {entry.quantityInStock}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="text-2xl font-bold" data-testid="text-products-count">{sortedInventory.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" data-testid="text-total-value">${totalInventoryValue.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
+
+      {isProductionCenter && isAdminOrManager && (
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Record Production
+              </CardTitle>
+              <CardDescription>Enter the quantity of products manufactured</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Production Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    data-testid="input-production-date"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product">Product</Label>
+                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                    <SelectTrigger id="product" data-testid="select-product">
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {productsLoading ? (
+                        <SelectItem value="loading" disabled>Loading products...</SelectItem>
+                      ) : (
+                        products.map((product: any) => (
+                          <SelectItem key={product.id} value={product.id} data-testid={`option-product-${product.id}`}>
+                            {product.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity Produced</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="1"
+                    value={quantityProduced || ""}
+                    onChange={(e) => setQuantityProduced(parseInt(e.target.value) || 0)}
+                    placeholder="Enter quantity (must be > 0)"
+                    data-testid="input-quantity-produced"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes (Optional)</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any production notes..."
+                    rows={3}
+                    data-testid="input-notes"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={recordProductionMutation.isPending}
+                  data-testid="button-submit-production"
+                >
+                  {recordProductionMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Recording...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Record Production
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Production</CardTitle>
+              <CardDescription>Last 10 production entries</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {inventoryHistoryLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                </div>
+              ) : recentProduction.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8" data-testid="text-no-production">
+                  No production recorded yet
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {recentProduction.map((entry: any) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between p-3 bg-card border rounded-md"
+                      data-testid={`production-entry-${entry.id}`}
+                    >
+                      <div>
+                        <p className="font-medium text-foreground" data-testid={`product-${entry.id}`}>
+                          {productMap.get(entry.productId) || "Unknown"}
+                        </p>
+                        <p className="text-sm text-muted-foreground" data-testid={`date-${entry.id}`}>
+                          {entry.date}
+                        </p>
+                        {entry.notes && (
+                          <p className="text-sm text-muted-foreground italic mt-1">{entry.notes}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-foreground" data-testid={`quantity-${entry.id}`}>
+                          +{entry.quantityProduced}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Stock: {entry.quantityInStock}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Current Inventory</CardTitle>
-          <CardDescription>Production center stock levels</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            {isProductionCenter ? <Factory className="w-5 h-5" /> : <Store className="w-5 h-5" />}
+            {isProductionCenter ? "Production Center Inventory" : `${selectedStoreName} Inventory`}
+          </CardTitle>
+          <CardDescription>
+            {isProductionCenter ? "Current stock levels at production center" : `Current stock levels at ${selectedStoreName}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -294,7 +402,7 @@ export default function Inventory() {
             </p>
           ) : sortedInventory.length === 0 ? (
             <p className="text-muted-foreground text-center py-8" data-testid="text-no-inventory">
-              No products with current stock
+              No products with current stock at this location
             </p>
           ) : (
             <div className="overflow-x-auto">

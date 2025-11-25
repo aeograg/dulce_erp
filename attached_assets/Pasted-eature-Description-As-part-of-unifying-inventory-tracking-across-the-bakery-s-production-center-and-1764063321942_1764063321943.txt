@@ -1,0 +1,39 @@
+eature Description:
+As part of unifying inventory tracking across the bakery's production center and multiple stores in our Dulce ERP system, we need to extend the inventory table to support store-specific inventories. Currently, the inventory table is used only for the production center (likely without a storeId column), tracking cumulative quantityInStock and quantityProduced. By adding a storeId column, we can treat the production center as a special store (e.g., create a dedicated store record for "Delahey" as the production center during seeding or use storeId=1 for it). This allows seamless tracking of inventory levels per store, with automatic updates from deliveries and production entries. Users (Admin/Manager) should be able to view and filter inventories by store in the Inventory module, showing current stock levels, production history, and totals per store. Staff users should be restricted to viewing only their assigned store's inventory.
+Detailed Work Items:
+
+Database Schema Update:
+In shared/schema.ts, modify the inventory table definition to add storeId: integer('storeId').references(() => stores.id).notNull().default(1), (assuming default to production center's storeId; make it nullable if needed for legacy data).
+Add foreign key constraint for integrity.
+Use Drizzle Kit to generate and push migration: Run npx drizzle-kit generate:pg and npx drizzle-kit push:pg in the Replit shell to apply the change to the Neon DB without data loss.
+Update relations in schema if necessary (e.g., add inventoryRelations to link with stores).
+
+Backend Logic Updates:
+In server/storage.ts (PostgresStorage class), update methods like getInventory, getCurrentInventory, and recordProduction to handle storeId:
+For recordProduction, set storeId to the production center's ID (e.g., fetch from stores where name='Delahey' or hardcode if known).
+Add a new method getInventoryByStore(storeId: number) to fetch inventory entries filtered by storeId, computing current stock as the latest quantityInStock per product.
+In delivery handling (e.g., in createDelivery method), after deducting from production inventory, add/update the target store's inventory: Create a new inventory entry for the target storeId with quantityInStock += quantitySent, quantityProduced=0.
+Use transactions (db.transaction) for atomic updates to prevent inconsistencies (e.g., deduct from production and add to store in one tx).
+Update any cost/value calculations to aggregate per store.
+
+
+API Route Updates:
+In server/routes.ts, update /api/inventory GET to accept query param ?storeId=number and use the new filtered method from storage.
+Add role checks: Staff can only query their assigned storeId (from session.user.storeId).
+For POST /api/inventory/production, ensure storeId is set to production's.
+
+Frontend Updates:
+In client/src/pages/Inventory.tsx, add a store selector dropdown (use useQuery for /api/stores), filter the currentInventory query by selected storeId.
+Update the table to show only filtered data; add summary cards per store (e.g., total value by store).
+For production entry form, hide store selector or default to production; for viewing, allow switching.
+Invalidate queries after deliveries to refresh store inventories.
+
+Seeding and Migration:
+In server/seed.ts, add or update a store for "Delahey" as production center (e.g., {name: 'Delahey', deliverySchedule: 'production'}).
+Migrate existing inventory data: Write a script to set storeId for old entries to production's ID.
+Test with sample data: Produce in Delahey, deliver to another store, verify stocks update correctly.
+
+Edge Cases and Validation:
+Prevent negative stock: Validate before deductions.
+Handle no entries: Default stock=0.
+Performance: Index on (storeId, productId, date) in schema.

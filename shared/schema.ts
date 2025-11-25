@@ -116,6 +116,7 @@ export const inventory = pgTable("inventory", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   date: date("date").notNull(),
   productId: varchar("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
+  storeId: varchar("store_id").references(() => stores.id, { onDelete: "cascade" }),
   quantityInStock: integer("quantity_in_stock").notNull().default(0),
   quantityProduced: integer("quantity_produced").notNull().default(0),
   notes: text("notes"),
