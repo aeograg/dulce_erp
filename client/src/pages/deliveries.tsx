@@ -45,7 +45,6 @@ export default function Deliveries() {
   const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
   
   const [predeterminedModalOpen, setPredeterminedModalOpen] = useState(false);
-  const [predeterminedDate, setPredeterminedDate] = useState(today);
   const [predeterminedStore, setPredeterminedStore] = useState<string>("");
   const [predeterminedQuantities, setPredeterminedQuantities] = useState<Record<string, number>>({});
 
@@ -105,21 +104,20 @@ export default function Deliveries() {
     },
   });
 
-  const predeterminedMutation = useMutation({
-    mutationFn: async (data: { date: string; storeId: string; products: Array<{ productId: string; quantity: number }> }) => {
-      return await apiRequest("POST", "/api/deliveries/predetermined", data);
+  const savePredeterminedMutation = useMutation({
+    mutationFn: async (data: { storeId: string; products: Array<{ productId: string; defaultQuantity: number }> }) => {
+      return await apiRequest("POST", "/api/predetermined-deliveries", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliveries"] });
-      toast({ title: "Predetermined deliveries processed successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/predetermined-deliveries", predeterminedStore] });
+      toast({ title: "Delivery template saved successfully" });
       setPredeterminedModalOpen(false);
       setPredeterminedStore("");
       setPredeterminedQuantities({});
-      setPredeterminedDate(today);
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to process predetermined deliveries",
+        title: "Failed to save delivery template",
         description: error.message,
         variant: "destructive",
       });
@@ -174,7 +172,7 @@ export default function Deliveries() {
     saveMutation.mutate(deliveryData);
   };
 
-  const handlePredeterminedSubmit = () => {
+  const handleSavePredeterminedTemplate = () => {
     if (!predeterminedStore) {
       toast({
         title: "Please select a store",
@@ -183,14 +181,14 @@ export default function Deliveries() {
       return;
     }
 
-    const productsToDeliver = Object.entries(predeterminedQuantities)
+    const productsToSave = Object.entries(predeterminedQuantities)
       .filter(([_, quantity]) => quantity > 0)
       .map(([productId, quantity]) => ({
         productId,
-        quantity: Math.max(0, Math.floor(quantity)),
+        defaultQuantity: Math.max(0, Math.floor(quantity)),
       }));
 
-    if (productsToDeliver.length === 0) {
+    if (productsToSave.length === 0) {
       toast({
         title: "Please select at least one product with quantity > 0",
         variant: "destructive",
@@ -198,27 +196,9 @@ export default function Deliveries() {
       return;
     }
 
-    // Validate against available inventory
-    const insufficientStock = productsToDeliver.filter(item => {
-      const available = currentInventory[item.productId] || 0;
-      return item.quantity > available;
-    });
-
-    if (insufficientStock.length > 0) {
-      const product = products.find(p => p.id === insufficientStock[0].productId);
-      const available = currentInventory[insufficientStock[0].productId] || 0;
-      toast({
-        title: "Insufficient inventory stock",
-        description: `Cannot send ${insufficientStock[0].quantity} units of ${product?.name}. Only ${available} available.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    predeterminedMutation.mutate({
-      date: predeterminedDate,
+    savePredeterminedMutation.mutate({
       storeId: predeterminedStore,
-      products: productsToDeliver,
+      products: productsToSave,
     });
   };
 
@@ -241,12 +221,8 @@ export default function Deliveries() {
   const handlePredeterminedModalOpen = (open: boolean) => {
     setPredeterminedModalOpen(open);
     if (open) {
-      // Initialize quantities with default values when modal opens
-      const initialQuantities: Record<string, number> = {};
-      predeterminedDeliveries.forEach((item: any) => {
-        initialQuantities[item.productId] = item.defaultQuantity;
-      });
-      setPredeterminedQuantities(initialQuantities);
+      // Reset quantities when opening modal
+      setPredeterminedQuantities({});
     }
   };
 
@@ -382,124 +358,102 @@ export default function Deliveries() {
           <div className="flex flex-col gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Predetermined Deliveries</CardTitle>
+                <CardTitle>Delivery Templates</CardTitle>
                 <CardDescription>
-                  Process recurring delivery schedules
+                  Create and manage delivery templates for recurring store deliveries
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Dialog open={predeterminedModalOpen} onOpenChange={handlePredeterminedModalOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full" data-testid="button-predetermined-delivery">
-                      Create Predetermined Delivery
+                      Create Delivery Template
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle>Predetermined Delivery</DialogTitle>
+                      <DialogTitle>Create Delivery Template</DialogTitle>
                       <DialogDescription>
-                        Set up a recurring delivery with pre-filled quantities
+                        Save product quantities as a template for recurring deliveries to this store
                       </DialogDescription>
                     </DialogHeader>
                     
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="pred-date">Date</Label>
-                          <Input
-                            id="pred-date"
-                            type="date"
-                            value={predeterminedDate}
-                            onChange={(e) => setPredeterminedDate(e.target.value)}
-                            data-testid="input-predetermined-date"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="pred-store">Store</Label>
-                          <Select
-                            value={predeterminedStore}
-                            onValueChange={(val) => {
-                              setPredeterminedStore(val);
-                              // Initialize quantities when store changes
-                              const initialQuantities: Record<string, number> = {};
-                              predeterminedDeliveries.forEach((item: any) => {
-                                initialQuantities[item.productId] = item.defaultQuantity;
-                              });
-                              setPredeterminedQuantities(initialQuantities);
-                            }}
-                          >
-                            <SelectTrigger id="pred-store" data-testid="select-predetermined-store">
-                              <SelectValue placeholder="Select store" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {stores.map((store) => (
-                                <SelectItem key={store.id} value={store.id}>
-                                  {store.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pred-store">Store</Label>
+                        <Select
+                          value={predeterminedStore}
+                          onValueChange={setPredeterminedStore}
+                        >
+                          <SelectTrigger id="pred-store" data-testid="select-predetermined-store">
+                            <SelectValue placeholder="Select store" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stores.map((store) => (
+                              <SelectItem key={store.id} value={store.id}>
+                                {store.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {predeterminedStore && (
                         <div className="space-y-2">
                           <Label>Product Quantities</Label>
-                          {predeterminedDeliveries.length === 0 ? (
-                            <p className="text-sm text-muted-foreground p-3 border rounded-md text-center">
-                              No predetermined deliveries set for this store
-                            </p>
-                          ) : (
-                            <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
-                              <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
-                                <div>Product</div>
-                                <div className="text-center">Default</div>
-                                <div className="text-center">Available</div>
-                                <div className="text-center">Quantity</div>
+                          <p className="text-xs text-muted-foreground">
+                            Set default quantities for products you want to deliver to this store regularly
+                          </p>
+                          <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
+                            <div className="grid grid-cols-[2fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
+                              <div>Product</div>
+                              <div className="text-center">Default Quantity</div>
+                            </div>
+                            {productsLoading ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="w-6 h-6 animate-spin" />
                               </div>
-                              {predeterminedDeliveries.map((item: any) => {
-                                const availableStock = currentInventory[item.productId] || 0;
-                                const requestedQty = predeterminedQuantities[item.productId] || 0;
-                                const exceedsStock = requestedQty > availableStock;
-                                
-                                return (
-                                  <div key={item.productId} className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 items-center">
-                                    <Label className="text-sm">{item.productName}</Label>
-                                    <div className="text-center text-sm font-medium">{item.defaultQuantity}</div>
-                                    <div className={`text-center text-sm font-semibold ${availableStock === 0 ? 'text-destructive' : 'text-foreground'}`}>
-                                      {availableStock}
-                                    </div>
+                            ) : products.length === 0 ? (
+                              <p className="text-sm text-muted-foreground text-center py-4">
+                                No products available
+                              </p>
+                            ) : (
+                              <>
+                                {products.map((product) => (
+                                  <div key={product.id} className="grid grid-cols-[2fr_1fr] gap-4 items-center">
+                                    <Label className="text-sm" htmlFor={`pred-qty-${product.id}`}>
+                                      {product.name}
+                                    </Label>
                                     <Input
+                                      id={`pred-qty-${product.id}`}
                                       type="number"
                                       min="0"
-                                      value={predeterminedQuantities[item.productId] || ""}
-                                      onChange={(e) => handlePredeterminedQuantityChange(item.productId, e.target.value)}
+                                      value={predeterminedQuantities[product.id] || ""}
+                                      onChange={(e) => handlePredeterminedQuantityChange(product.id, e.target.value)}
                                       placeholder="0"
-                                      className={`w-full ${exceedsStock ? 'border-destructive' : ''}`}
-                                      data-testid={`input-predetermined-quantity-${item.productId}`}
+                                      data-testid={`input-predetermined-quantity-${product.id}`}
                                     />
                                   </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                                ))}
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
 
                       <Button
-                        onClick={handlePredeterminedSubmit}
+                        onClick={handleSavePredeterminedTemplate}
                         className="w-full"
-                        disabled={predeterminedMutation.isPending || predeterminedDeliveries.length === 0}
-                        data-testid="button-submit-predetermined"
+                        disabled={savePredeterminedMutation.isPending || !predeterminedStore}
+                        data-testid="button-save-template"
                       >
-                        {predeterminedMutation.isPending ? (
+                        {savePredeterminedMutation.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Processing...
+                            Saving...
                           </>
                         ) : (
-                          "Process Delivery"
+                          "Save Template"
                         )}
                       </Button>
                     </div>

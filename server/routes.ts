@@ -471,6 +471,63 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  app.post("/api/predetermined-deliveries", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      const { storeId, products } = req.body;
+      
+      if (!storeId || !Array.isArray(products) || products.length === 0) {
+        return res.status(400).json({ 
+          error: "Missing storeId or products array" 
+        });
+      }
+      
+      const savedTemplates = [];
+      const errors = [];
+      
+      for (const { productId, defaultQuantity } of products) {
+        if (defaultQuantity <= 0) continue;
+        
+        try {
+          const template = await storage.createPredeterminedDelivery({
+            storeId,
+            productId,
+            defaultQuantity,
+            frequency: 'daily',
+          });
+          savedTemplates.push(template);
+        } catch (error: any) {
+          errors.push({
+            productId,
+            error: error.message,
+          });
+        }
+      }
+      
+      if (errors.length > 0 && savedTemplates.length === 0) {
+        return res.status(400).json({
+          error: "Failed to save any templates",
+          details: errors,
+        });
+      }
+      
+      res.status(201).json({
+        created: savedTemplates,
+        failed: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to save predetermined delivery template" });
+    }
+  });
+
+  app.delete("/api/predetermined-deliveries/:id", requireRole("Admin", "Manager"), async (req, res) => {
+    try {
+      await storage.deletePredeterminedDelivery(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete predetermined delivery" });
+    }
+  });
+
   app.post("/api/deliveries/predetermined", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const { date, storeId, products } = req.body;

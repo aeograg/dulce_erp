@@ -91,6 +91,8 @@ export interface IStorage {
   // Predetermined Deliveries
   getPredeterminedDeliveriesByStore(storeId: string): Promise<Array<any>>;
   getAllPredeterminedDeliveries(): Promise<any[]>;
+  createPredeterminedDelivery(data: { storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery>;
+  deletePredeterminedDelivery(id: string): Promise<void>;
   
   // Sales
   getAllSales(): Promise<Sale[]>;
@@ -610,6 +612,20 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(stores, eq(predeterminedDeliveries.storeId, stores.id));
     
     return results;
+  }
+
+  async createPredeterminedDelivery(data: { storeId: string; productId: string; defaultQuantity: number; frequency?: string }): Promise<PredeterminedDelivery> {
+    const result = await db.insert(predeterminedDeliveries).values({
+      storeId: data.storeId,
+      productId: data.productId,
+      defaultQuantity: data.defaultQuantity,
+      frequency: data.frequency || 'daily',
+    }).returning();
+    return result[0];
+  }
+
+  async deletePredeterminedDelivery(id: string): Promise<void> {
+    await db.delete(predeterminedDeliveries).where(eq(predeterminedDeliveries.id, id));
   }
 }
 
