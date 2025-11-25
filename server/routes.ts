@@ -507,6 +507,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       }
       
       if (errors.length > 0 && savedTemplates.length === 0) {
+        console.error("Template save errors:", errors);
         return res.status(400).json({
           error: "Failed to save any templates",
           details: errors,
@@ -518,6 +519,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         failed: errors.length > 0 ? errors : undefined,
       });
     } catch (error: any) {
+      console.error("Template save exception:", error);
       res.status(500).json({ error: error.message || "Failed to save predetermined delivery template" });
     }
   });
