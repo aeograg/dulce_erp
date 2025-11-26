@@ -398,7 +398,7 @@ export default function NeedsList() {
                   <div className="w-24 space-y-2">
                     <Input
                       type="number"
-                      step="0.001"
+                      step="any"
                       value={item.quantity}
                       onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
                       placeholder="Qty"

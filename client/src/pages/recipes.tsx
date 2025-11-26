@@ -166,7 +166,7 @@ export default function Recipes() {
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0.01"
                       value={newRecipe.quantity}
                       onChange={(e) => setNewRecipe({ ...newRecipe, quantity: Number(e.target.value) })}

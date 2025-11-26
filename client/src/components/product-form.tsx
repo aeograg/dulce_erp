@@ -116,7 +116,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 <Input
                   id="unitCost"
                   type="number"
-                  step="0.01"
+                  step="any"
                   min="0"
                   value={formData.unitCost}
                   onChange={(e) => handleChange("unitCost", e.target.value)}
@@ -129,7 +129,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 <Input
                   id="sellingPrice"
                   type="number"
-                  step="0.01"
+                  step="any"
                   min="0"
                   value={formData.sellingPrice}
                   onChange={(e) => handleChange("sellingPrice", e.target.value)}
@@ -173,7 +173,7 @@ export function ProductForm({ product, onSubmit, trigger }: ProductFormProps) {
                 <Input
                   id="maxWastePercent"
                   type="number"
-                  step="0.1"
+                  step="any"
                   min="0"
                   max="100"
                   value={formData.maxWastePercent}
