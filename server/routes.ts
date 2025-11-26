@@ -780,8 +780,19 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.post("/api/needs-requests", requireAuth, async (req, res) => {
     try {
-      const requestData = req.body;
-      const request = await storage.createNeedsRequest(requestData, (req.session as any).username);
+      const { storeId, requestType, items, notes } = req.body;
+      
+      if (!storeId || !requestType || !items) {
+        return res.status(400).json({ error: "Missing required fields: storeId, requestType, items" });
+      }
+
+      const request = await storage.createNeedsRequest({
+        storeId,
+        requestType,
+        items,
+        notes: notes || null,
+        status: "pending",
+      }, (req.session as any).username);
       res.status(201).json(request);
     } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to create needs request" });
