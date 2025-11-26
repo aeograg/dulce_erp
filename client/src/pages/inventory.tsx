@@ -14,6 +14,14 @@ import { useAuth } from "@/lib/auth";
 type SortField = "name" | "stock";
 type SortDirection = "asc" | "desc";
 
+// Helper function to format numbers and remove trailing zeros
+const formatQuantity = (value: any): string => {
+  if (value === null || value === undefined) return "0";
+  const num = parseFloat(value);
+  if (isNaN(num)) return "0";
+  return num % 1 === 0 ? num.toString() : num.toFixed(3).replace(/\.?0+$/, "");
+};
+
 export default function Inventory() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -366,10 +374,10 @@ export default function Inventory() {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-foreground" data-testid={`quantity-${entry.id}`}>
-                          +{entry.quantityProduced}
+                          +{formatQuantity(entry.quantityProduced)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          Stock: {entry.quantityInStock}
+                          Stock: {formatQuantity(entry.quantityInStock)}
                         </p>
                       </div>
                     </div>
@@ -441,7 +449,7 @@ export default function Inventory() {
                         {item.name}
                       </td>
                       <td className="text-right py-3 px-4 text-lg font-semibold" data-testid={`stock-${item.id}`}>
-                        {item.stock}
+                        {formatQuantity(item.stock)}
                       </td>
                       <td className="text-right py-3 px-4 text-muted-foreground" data-testid={`date-${item.id}`}>
                         {item.lastUpdated}
