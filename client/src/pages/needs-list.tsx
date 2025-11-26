@@ -10,7 +10,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Package, Leaf, Plus, Clock, CheckCircle, XCircle, Trash } from "lucide-react";
+import { Package, Leaf, Plus, Clock, CheckCircle, XCircle, Trash, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 interface Product {
@@ -30,13 +30,17 @@ interface Store {
   name: string;
 }
 
+interface RequestItem {
+  itemId?: string;
+  itemName: string;
+  quantity: string;
+}
+
 interface NeedsRequest {
   id: string;
   storeId: string;
   requestType: string;
-  itemId?: string;
-  itemName?: string;
-  quantity: string;
+  items: string;
   status: string;
   notes?: string;
   createdBy?: string;
@@ -49,9 +53,7 @@ export default function NeedsList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [requestType, setRequestType] = useState<"product" | "raw">("product");
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [selectedItemId, setSelectedItemId] = useState<string>("");
-  const [customItemName, setCustomItemName] = useState("");
-  const [quantity, setQuantity] = useState("");
+  const [items, setItems] = useState<RequestItem[]>([{ itemId: "", itemName: "", quantity: "" }]);
   const [notes, setNotes] = useState("");
 
   const { data: requests = [], isLoading } = useQuery<NeedsRequest[]>({
@@ -120,9 +122,7 @@ export default function NeedsList() {
 
   const resetForm = () => {
     setSelectedStoreId("");
-    setSelectedItemId("");
-    setCustomItemName("");
-    setQuantity("");
+    setItems([{ itemId: "", itemName: "", quantity: "" }]);
     setNotes("");
   };
 
@@ -130,6 +130,20 @@ export default function NeedsList() {
     setRequestType(type);
     resetForm();
     setDialogOpen(true);
+  };
+
+  const handleAddItem = () => {
+    setItems([...items, { itemId: "", itemName: "", quantity: "" }]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleItemChange = (index: number, field: string, value: string) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -140,17 +154,28 @@ export default function NeedsList() {
       toast({ title: "Please select a store", variant: "destructive" });
       return;
     }
-    
-    const itemName = requestType === "product" 
-      ? (selectedItemId ? products.find(p => p.id === selectedItemId)?.name : customItemName)
-      : (selectedItemId ? ingredients.find(i => i.id === selectedItemId)?.name : customItemName);
-    
+
+    if (items.some(item => !item.itemName || !item.quantity)) {
+      toast({ title: "All items must have a name and quantity", variant: "destructive" });
+      return;
+    }
+
+    const processedItems = items.map(item => {
+      const itemName = requestType === "product" 
+        ? (item.itemId ? products.find(p => p.id === item.itemId)?.name : item.itemName)
+        : (item.itemId ? ingredients.find(i => i.id === item.itemId)?.name : item.itemName);
+      
+      return {
+        itemId: item.itemId || null,
+        itemName: itemName || item.itemName,
+        quantity: item.quantity,
+      };
+    });
+
     createRequestMutation.mutate({
       storeId,
       requestType,
-      itemId: selectedItemId || null,
-      itemName: itemName || customItemName,
-      quantity,
+      items: JSON.stringify(processedItems),
       notes,
     });
   };
@@ -199,100 +224,103 @@ export default function NeedsList() {
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {requests.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-muted-foreground">
-              No requests yet. Create a new request using the buttons above.
-            </CardContent>
-          </Card>
-        ) : (
-          requests.map((request) => (
-            <Card key={request.id} data-testid={`card-request-${request.id}`}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {request.requestType === "product" ? (
-                      <Package className="w-5 h-5 text-blue-500" />
-                    ) : (
-                      <Leaf className="w-5 h-5 text-green-500" />
-                    )}
-                    <CardTitle className="text-lg">
-                      {request.itemName || "Unknown Item"}
-                    </CardTitle>
-                    {getStatusBadge(request.status)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {user?.role !== "Staff" && request.status === "pending" && (
-                      <>
+      {requests.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-center text-muted-foreground">
+            No requests yet. Create a new request using the buttons above.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-4 font-medium text-foreground">Type</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Items</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Store</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Requested By</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Status</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Date</th>
+                <th className="text-left py-3 px-4 font-medium text-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((request) => {
+                const requestItems = JSON.parse(request.items || "[]");
+                return (
+                  <tr key={request.id} className="border-b hover-elevate" data-testid={`row-request-${request.id}`}>
+                    <td className="py-3 px-4">
+                      {request.requestType === "product" ? (
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-blue-500" />
+                          <span>Product</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Leaf className="w-4 h-4 text-green-500" />
+                          <span>Material</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="space-y-1">
+                        {requestItems.map((item: any, idx: number) => (
+                          <div key={idx} className="text-sm">
+                            {item.itemName} - <span className="font-semibold">{item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm">{getStoreName(request.storeId)}</td>
+                    <td className="py-3 px-4 text-sm">{request.createdBy || "Unknown"}</td>
+                    <td className="py-3 px-4">{getStatusBadge(request.status)}</td>
+                    <td className="py-3 px-4 text-sm">{new Date(request.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 space-x-2 flex">
+                      {user?.role !== "Staff" && request.status === "pending" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStatusMutation.mutate({ id: request.id, status: "approved" })}
+                            data-testid={`button-approve-${request.id}`}
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => updateStatusMutation.mutate({ id: request.id, status: "rejected" })}
+                            data-testid={`button-reject-${request.id}`}
+                          >
+                            <XCircle className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </>
+                      )}
+                      {user?.role !== "Staff" && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => updateStatusMutation.mutate({ id: request.id, status: "approved" })}
-                          data-testid={`button-approve-${request.id}`}
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this request?")) {
+                              deleteRequestMutation.mutate(request.id);
+                            }
+                          }}
+                          data-testid={`button-delete-${request.id}`}
                         >
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <Trash className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => updateStatusMutation.mutate({ id: request.id, status: "rejected" })}
-                          data-testid={`button-reject-${request.id}`}
-                        >
-                          <XCircle className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </>
-                    )}
-                    {user?.role !== "Staff" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          if (confirm("Are you sure you want to delete this request?")) {
-                            deleteRequestMutation.mutate(request.id);
-                          }
-                        }}
-                        data-testid={`button-delete-${request.id}`}
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 text-sm">
-                  <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">Store:</span>
-                    <span>{getStoreName(request.storeId)}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">Quantity:</span>
-                    <span>{request.quantity}</span>
-                  </div>
-                  {request.notes && (
-                    <div className="flex items-center gap-4">
-                      <span className="text-muted-foreground">Notes:</span>
-                      <span>{request.notes}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">Requested by:</span>
-                    <span>{request.createdBy || "Unknown"}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">Date:</span>
-                    <span>{new Date(request.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {requestType === "product" ? (
@@ -333,57 +361,76 @@ export default function NeedsList() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="item">
-                {requestType === "product" ? "Product" : "Ingredient"}
-              </Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                <SelectTrigger data-testid="select-item">
-                  <SelectValue placeholder={`Select a ${requestType === "product" ? "product" : "ingredient"} or leave empty for custom`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {requestType === "product" 
-                    ? products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} ({product.code})
-                        </SelectItem>
-                      ))
-                    : ingredients.map((ingredient) => (
-                        <SelectItem key={ingredient.id} value={ingredient.id}>
-                          {ingredient.name} ({ingredient.unit})
-                        </SelectItem>
-                      ))
-                  }
-                </SelectContent>
-              </Select>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              <Label>Items</Label>
+              {items.map((item, index) => (
+                <div key={index} className="flex gap-2 items-end p-3 border rounded-md bg-card">
+                  <div className="flex-1 space-y-2">
+                    <Select value={item.itemId} onValueChange={(val) => handleItemChange(index, "itemId", val)}>
+                      <SelectTrigger data-testid={`select-item-${index}`}>
+                        <SelectValue placeholder={`Select a ${requestType === "product" ? "product" : "ingredient"}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {requestType === "product" 
+                          ? products.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {product.name} ({product.code})
+                              </SelectItem>
+                            ))
+                          : ingredients.map((ingredient) => (
+                              <SelectItem key={ingredient.id} value={ingredient.id}>
+                                {ingredient.name} ({ingredient.unit})
+                              </SelectItem>
+                            ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      type="text"
+                      value={item.itemName}
+                      onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                      placeholder="Or custom item name"
+                      data-testid={`input-custom-item-${index}`}
+                    />
+                  </div>
+                  <div className="w-24 space-y-2">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                      placeholder="Qty"
+                      data-testid={`input-quantity-${index}`}
+                    />
+                  </div>
+                  {items.length > 1 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRemoveItem(index)}
+                      data-testid={`button-remove-item-${index}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
 
-            {!selectedItemId && (
-              <div className="space-y-2">
-                <Label htmlFor="customItem">Or enter custom item name</Label>
-                <Input
-                  id="customItem"
-                  value={customItemName}
-                  onChange={(e) => setCustomItemName(e.target.value)}
-                  placeholder="e.g., Paper bags, Coffee cups..."
-                  data-testid="input-custom-item"
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                step="0.001"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="Enter quantity"
-                required
-                data-testid="input-quantity"
-              />
-            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddItem}
+              data-testid="button-add-item"
+              className="w-full"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Another Item
+            </Button>
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (optional)</Label>
