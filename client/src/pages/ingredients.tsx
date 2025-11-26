@@ -155,7 +155,7 @@ export default function Ingredients() {
                     <Input
                       id="costPerUnit"
                       type="number"
-                      step="0.01"
+                      step="0.001"
                       min="0"
                       value={formData.costPerUnit}
                       onChange={(e) => setFormData({ ...formData, costPerUnit: Number(e.target.value) })}
