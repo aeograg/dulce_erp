@@ -155,20 +155,30 @@ export default function NeedsList() {
       return;
     }
 
-    if (items.some(item => !item.itemName || !item.quantity)) {
-      toast({ title: "All items must have a name and quantity", variant: "destructive" });
+    if (items.some(item => !item.quantity)) {
+      toast({ title: "All items must have a quantity", variant: "destructive" });
+      return;
+    }
+
+    if (items.some(item => !item.itemId && !item.itemName)) {
+      toast({ title: "Each item must be selected or have a custom name", variant: "destructive" });
       return;
     }
 
     const processedItems = items.map(item => {
-      const itemName = requestType === "product" 
-        ? (item.itemId ? products.find(p => p.id === item.itemId)?.name : item.itemName)
-        : (item.itemId ? ingredients.find(i => i.id === item.itemId)?.name : item.itemName);
+      let itemName = "";
+      if (item.itemId) {
+        itemName = requestType === "product" 
+          ? (products.find(p => p.id === item.itemId)?.name || "")
+          : (ingredients.find(i => i.id === item.itemId)?.name || "");
+      } else {
+        itemName = item.itemName;
+      }
       
       return {
         itemId: item.itemId || null,
-        itemName: itemName || item.itemName,
-        quantity: item.quantity,
+        itemName: itemName,
+        quantity: parseFloat(item.quantity) > 0 ? item.quantity : "0",
       };
     });
 
