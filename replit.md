@@ -6,6 +6,16 @@ Dulce ERP is a comprehensive bakery management system designed for efficient man
 
 ## Recent Changes
 
+**November 26, 2025 - Needs List Multi-Item Support & Form Fixes**
+- Added `items` column (JSON text array) to `needs_requests` table for multi-item support per request
+- Migrated existing single-item records to new array format (itemId, itemName, quantity preserved in legacy columns)
+- Fixed sticky zeros issue in number inputs by changing `step="0.01/0.001"` to `step="any"` across all form fields:
+  - product-form.tsx: unitCost, sellingPrice, maxWastePercent
+  - ingredients.tsx: costPerUnit
+  - recipes.tsx: ingredient quantity
+  - needs-list.tsx: item quantity
+- Schema updated with backwards-compatible columns for gradual migration
+
 **November 25, 2025 - Audit Fields Implementation (COMPLETED)**
 - Added comprehensive audit tracking to all 11 database tables: `createdBy`, `createdAt`, `updatedAt`
 - Tables updated: users, stores, products, ingredients, recipes, stock_entries, deliveries, sales, inventory, predetermined_deliveries, session
