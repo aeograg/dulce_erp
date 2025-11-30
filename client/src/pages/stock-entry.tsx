@@ -35,6 +35,12 @@ import { format } from "date-fns";
 import { Loader2, Plus, ArrowUpDown, Filter, Package, Pencil } from "lucide-react";
 import type { StockEntry } from "@shared/schema";
 
+const formatQuantity = (value: any): string => {
+  if (value == null) return "0";
+  const num = Number(value);
+  return isNaN(num) ? "0" : Math.round(num).toString();
+};
+
 type SortField = "date" | "store" | "product" | "reportedStock";
 type SortOrder = "asc" | "desc";
 
@@ -467,11 +473,11 @@ export default function StockEntry() {
                         <TableCell>{format(new Date(entry.date), "MMM dd, yyyy")}</TableCell>
                         <TableCell>{storeMap.get(entry.storeId)}</TableCell>
                         <TableCell>{productMap.get(entry.productId)}</TableCell>
-                        <TableCell className="text-right">{entry.delivered || 0}</TableCell>
-                        <TableCell className="text-right">{entry.reportedStock || 0}</TableCell>
-                        <TableCell className="text-right">{entry.waste || 0}</TableCell>
-                        <TableCell className="text-right">{entry.sales || 0}</TableCell>
-                        <TableCell className="text-right">{entry.expectedStock || 0}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.delivered)}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.reportedStock)}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.waste)}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.sales)}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.expectedStock)}</TableCell>
                         <TableCell className="text-right">
                           <Badge 
                             variant={isHighDiscrepancy ? "destructive" : "secondary"}
