@@ -385,7 +385,7 @@ export default function NeedsList() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {requestType === "product" ? (
@@ -427,60 +427,67 @@ export default function NeedsList() {
             )}
 
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              <Label>Items</Label>
+              <Label className="text-sm md:text-base">Items</Label>
               {items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-end p-3 border rounded-md bg-card">
-                  <div className="flex-1 space-y-2">
-                    <Select value={item.itemId} onValueChange={(val) => handleItemChange(index, "itemId", val)}>
-                      <SelectTrigger data-testid={`select-item-${index}`}>
-                        <SelectValue placeholder={`Select a ${requestType === "product" ? "product" : "ingredient"}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {requestType === "product" 
-                          ? products.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name} ({product.code})
-                              </SelectItem>
-                            ))
-                          : ingredients.map((ingredient) => (
-                              <SelectItem key={ingredient.id} value={ingredient.id}>
-                                {ingredient.name} ({ingredient.unit})
-                              </SelectItem>
-                            ))
-                        }
-                      </SelectContent>
-                    </Select>
+                <div key={index} className="flex flex-col md:flex-row gap-2 p-3 border rounded-md bg-card">
+                  <div className="flex gap-2 flex-1">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs text-muted-foreground md:hidden">Product/Ingredient</Label>
+                      <Select value={item.itemId} onValueChange={(val) => handleItemChange(index, "itemId", val)}>
+                        <SelectTrigger data-testid={`select-item-${index}`}>
+                          <SelectValue placeholder={`Select ${requestType === "product" ? "product" : "ingredient"}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {requestType === "product" 
+                            ? products.map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} ({product.code})
+                                </SelectItem>
+                              ))
+                            : ingredients.map((ingredient) => (
+                                <SelectItem key={ingredient.id} value={ingredient.id}>
+                                  {ingredient.name} ({ingredient.unit})
+                                </SelectItem>
+                              ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs text-muted-foreground md:hidden">Custom Name</Label>
+                      <Input
+                        type="text"
+                        value={item.itemName}
+                        onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                        placeholder="Or custom name"
+                        data-testid={`input-custom-item-${index}`}
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1 space-y-2">
-                    <Input
-                      type="text"
-                      value={item.itemName}
-                      onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                      placeholder="Or custom item name"
-                      data-testid={`input-custom-item-${index}`}
-                    />
+                  <div className="flex gap-2 items-end">
+                    <div className="w-20 md:w-24 space-y-1">
+                      <Label className="text-xs text-muted-foreground md:hidden">Qty</Label>
+                      <Input
+                        type="number"
+                        step="any"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                        placeholder="Qty"
+                        data-testid={`input-quantity-${index}`}
+                      />
+                    </div>
+                    {items.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRemoveItem(index)}
+                        data-testid={`button-remove-item-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                  <div className="w-24 space-y-2">
-                    <Input
-                      type="number"
-                      step="any"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
-                      placeholder="Qty"
-                      data-testid={`input-quantity-${index}`}
-                    />
-                  </div>
-                  {items.length > 1 && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemoveItem(index)}
-                      data-testid={`button-remove-item-${index}`}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>

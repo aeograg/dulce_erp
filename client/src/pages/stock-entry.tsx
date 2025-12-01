@@ -626,7 +626,7 @@ function StockEntryModal({ isOpen, onClose, stores, products, editMode, editData
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editMode ? "Edit" : "Add"} Daily Stock Entry</DialogTitle>
           <DialogDescription>

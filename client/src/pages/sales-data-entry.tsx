@@ -229,7 +229,7 @@ export default function SalesDataEntry() {
               Add Sales
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Sales Data</DialogTitle>
               <DialogDescription>
