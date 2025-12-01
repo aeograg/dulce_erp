@@ -111,6 +111,7 @@ export interface IStorage {
   getAllInventory(storeId?: string): Promise<Inventory[]>;
   getInventoryByProduct(productId: string, storeId?: string): Promise<Inventory[]>;
   getInventoryByStore(storeId: string): Promise<Inventory[]>;
+  getInventoryByStoreAndProduct(storeId: string, productId: string): Promise<Inventory | undefined>;
   getLatestInventoryByProduct(productId: string, storeId?: string): Promise<Inventory | undefined>;
   getCurrentInventoryLevels(storeId?: string): Promise<Map<string, number>>;
   recordProduction(entry: InsertInventory): Promise<Inventory>;
@@ -468,6 +469,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(inventory)
       .where(eq(inventory.productId, productId))
       .orderBy(desc(inventory.date));
+  }
+
+  async getInventoryByStoreAndProduct(storeId: string, productId: string): Promise<Inventory | undefined> {
+    const result = await db.select().from(inventory)
+      .where(and(eq(inventory.storeId, storeId), eq(inventory.productId, productId)))
+      .orderBy(desc(inventory.createdAt))
+      .limit(1);
+    return result[0];
   }
 
   async getLatestInventoryByProduct(productId: string, storeId?: string): Promise<Inventory | undefined> {

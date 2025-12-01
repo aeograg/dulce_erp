@@ -444,7 +444,7 @@ export default function StockEntry() {
                         <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-right">Delivered</TableHead>
+                    <TableHead className="text-right">Inventory Stock</TableHead>
                     <TableHead className="text-right">
                       <Button
                         variant="ghost"
@@ -473,7 +473,7 @@ export default function StockEntry() {
                         <TableCell>{format(new Date(entry.date), "MMM dd, yyyy")}</TableCell>
                         <TableCell>{storeMap.get(entry.storeId)}</TableCell>
                         <TableCell>{productMap.get(entry.productId)}</TableCell>
-                        <TableCell className="text-right">{formatQuantity(entry.delivered)}</TableCell>
+                        <TableCell className="text-right">{formatQuantity(entry.delivered)}</TableCell> {/* Inventory Stock */}
                         <TableCell className="text-right">{formatQuantity(entry.reportedStock)}</TableCell>
                         <TableCell className="text-right">{formatQuantity(entry.waste)}</TableCell>
                         <TableCell className="text-right">{formatQuantity(entry.sales)}</TableCell>
