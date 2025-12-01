@@ -593,6 +593,40 @@ export async function registerRoutes(app: Express): Promise<void> {
   app.post("/api/sales", requireRole("Admin", "Manager"), async (req, res) => {
     try {
       const validatedData = insertSaleSchema.parse(req.body);
+      const saleQuantity = Number(validatedData.quantity) || 0;
+      
+      // Validate sale quantity
+      if (saleQuantity <= 0) {
+        return res.status(400).json({ error: "Sale quantity must be greater than 0" });
+      }
+      
+      // Get inventory as-of the sale date for validation
+      const inventoryAsOfDate = await storage.getInventoryAsOfDate(
+        validatedData.productId,
+        validatedData.storeId, 
+        validatedData.date
+      );
+      const availableStock = Number(inventoryAsOfDate?.quantityInStock) || 0;
+      
+      // Validate there's enough inventory as-of the sale date
+      if (saleQuantity > availableStock) {
+        const product = await storage.getProduct(validatedData.productId);
+        const productName = product?.name || "Unknown product";
+        return res.status(400).json({ 
+          error: `Not enough stock available for ${productName} on ${validatedData.date}. Available: ${availableStock}, Requested: ${saleQuantity}` 
+        });
+      }
+      
+      // Deduct from store inventory using the sale date
+      await storage.updateInventoryStock(
+        validatedData.productId, 
+        -saleQuantity, 
+        validatedData.storeId,
+        `Sale deduction: -${saleQuantity}`,
+        validatedData.date
+      );
+      
+      // Create the sale record
       const sale = await storage.createSale(validatedData, (req.session as any).username);
       res.status(201).json(sale);
     } catch (error: any) {

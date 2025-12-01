@@ -113,9 +113,10 @@ export interface IStorage {
   getInventoryByStore(storeId: string): Promise<Inventory[]>;
   getInventoryByStoreAndProduct(storeId: string, productId: string): Promise<Inventory | undefined>;
   getLatestInventoryByProduct(productId: string, storeId?: string): Promise<Inventory | undefined>;
+  getInventoryAsOfDate(productId: string, storeId: string, date: string): Promise<Inventory | undefined>;
   getCurrentInventoryLevels(storeId?: string): Promise<Map<string, number>>;
   recordProduction(entry: InsertInventory): Promise<Inventory>;
-  updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string): Promise<void>;
+  updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string, date?: string): Promise<void>;
   addInventoryToStore(productId: string, storeId: string, quantity: number, notes?: string): Promise<void>;
   getProductionCenterStoreId(): Promise<string>;
   
@@ -494,6 +495,19 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getInventoryAsOfDate(productId: string, storeId: string, date: string): Promise<Inventory | undefined> {
+    // Get the latest inventory entry on or before the specified date
+    const result = await db.select().from(inventory)
+      .where(and(
+        eq(inventory.productId, productId), 
+        eq(inventory.storeId, storeId),
+        sql`${inventory.date} <= ${date}`
+      ))
+      .orderBy(desc(inventory.date), desc(inventory.createdAt))
+      .limit(1);
+    return result[0];
+  }
+
   async getCurrentInventoryLevels(storeId?: string): Promise<Map<string, number>> {
     const allProducts = await this.getAllProducts();
     const inventoryLevels = new Map<string, number>();
@@ -523,23 +537,32 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string): Promise<void> {
+  async updateInventoryStock(productId: string, quantity: number, storeId?: string, notes?: string, date?: string): Promise<void> {
     const targetStoreId = storeId || await this.getProductionCenterStoreId();
-    const latestEntry = await this.getLatestInventoryByProduct(productId, targetStoreId);
-    const currentStock = Number(latestEntry?.quantityInStock) || 0;
-    const newStock = currentStock + quantity;
+    const effectiveDate = date || new Date().toISOString().split('T')[0];
+    
+    // Get the stock as-of the specified date for historical consistency
+    // If no date provided, use the latest entry (current stock)
+    let baseStock: number;
+    if (date) {
+      const historicalEntry = await this.getInventoryAsOfDate(productId, targetStoreId, date);
+      baseStock = Number(historicalEntry?.quantityInStock) || 0;
+    } else {
+      const latestEntry = await this.getLatestInventoryByProduct(productId, targetStoreId);
+      baseStock = Number(latestEntry?.quantityInStock) || 0;
+    }
+    
+    const newStock = baseStock + quantity;
     
     // Prevent negative inventory
     if (newStock < 0) {
       const product = await this.getProduct(productId);
       const productName = product?.name || productId;
-      throw new Error(`Insufficient inventory for ${productName}. Available: ${currentStock}, Requested: ${Math.abs(quantity)}`);
+      throw new Error(`Insufficient inventory for ${productName}. Available: ${baseStock}, Requested: ${Math.abs(quantity)}`);
     }
     
-    const today = new Date().toISOString().split('T')[0];
-    
     await db.insert(inventory).values({
-      date: today,
+      date: effectiveDate,
       productId,
       storeId: targetStoreId,
       quantityInStock: String(newStock),

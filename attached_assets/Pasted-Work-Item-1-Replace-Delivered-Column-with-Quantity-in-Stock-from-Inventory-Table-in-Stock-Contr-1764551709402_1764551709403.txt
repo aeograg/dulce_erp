@@ -1,0 +1,103 @@
+Work Item 1: Replace "Delivered" Column with "Quantity in Stock" from Inventory Table in Stock Control Module
+
+Description:
+The Stock Control module's table still shows a "delivered" column, but we need to switch it to show the "quantityInStock" from the inventory table instead. This makes sense because the inventory table now tracks the actual stock levels for stores after deliveries and updates. We'll remove the old "delivered" field from the display and logic here to avoid confusion.
+
+Steps to Implement:
+
+
+
+
+
+Update the backend API endpoint for fetching stock control data (likely /api/stock-entries or similar) to join or query the inventory table for the relevant store's quantityInStock. If the inventory table doesn't have a storeId yet, add it to the schema (via Drizzle) to support per-store inventory tracking – right now it's production-center focused, but we need to extend it for stores.
+
+
+
+In the frontend (StockControl component), change the table columns: Remove "delivered" and add a new column called "Starting Stock" or "Inventory Stock" that pulls quantityInStock.
+
+
+
+Ensure the query filters by date, store, and product correctly to match the latest inventory entry.
+
+
+
+Test for cases where no inventory entry exists – show a fallback like "N/A" or trigger an alert.
+
+
+Dependencies: Drizzle schema update and migration.
+Acceptance Criteria: Table shows correct quantityInStock values per store/product/date, no "delivered" column visible.
+
+Work Item 2: Fix Expected Stock Calculation Formula in Stock Control Module
+
+Description:
+The current expected stock formula isn't right. We need to change it to: Expected Stock = (Inventory Stock of the store) - sales - waste. This assumes the store's inventory stock is always up-to-date with deliveries and sales, so it becomes our single source of truth for starting stock levels.
+
+Steps to Implement:
+
+
+
+
+
+In the backend, update the stock entry calculation logic (in the storage layer or route handlers) to pull quantityInStock from the inventory table as the base, then subtract sales and waste from the stock_entries or sales table. Save this as expectedRemaining in stock entries.
+
+
+
+If inventory isn't per-store yet, add storeId to the inventory table schema and adjust queries accordingly.
+
+
+
+In the frontend, refresh the Stock Control table to use this new formula for the "Expected Remaining" column. Update any discrepancy calculations (e.g., discrepancy % = (currentStock - expectedRemaining) / expectedRemaining * 100).
+
+
+
+Add logging or debug output to verify the formula during testing.
+
+
+Dependencies: Work Item 1 (for inventory table updates).
+Acceptance Criteria: Expected Stock column matches the new formula, discrepancy flags trigger correctly (>5%), and it handles zero/negative values gracefully.
+
+Work Item 3: Auto-Deduct Sales from Store's Inventory When Sales Data is Entered
+
+Description:
+Right now, entering sales data doesn't update the store's inventory – it should deduct the sold quantity from the quantityInStock in the inventory table for that store and product. This keeps everything in sync automatically.
+
+Steps to Implement:
+
+
+
+
+
+In the backend, modify the sales entry endpoint (e.g., /api/sales or /api/stock-entries/update-sales) to:
+
+
+
+
+
+Fetch the current quantityInStock from inventory for the store/product/date.
+
+
+
+Subtract the new sales quantity.
+
+
+
+Update and save back to inventory.
+
+
+
+If no inventory entry exists, create one with initial stock as 0 or pull from previous day (add carry-over logic if needed).
+
+
+
+Add validation: Prevent sales > current inventory, return error like "Not enough stock available."
+
+
+
+In the frontend (Sales Data Entry form), show a success toast after save that mentions "Inventory updated." Handle errors nicely.
+
+
+
+Trigger query invalidation in TanStack Query to refresh related views (like Stock Control or Remaining Stock Dashboard).
+
+Dependencies: Work Item 1 (for per-store inventory).
+Acceptance Criteria: After entering sales, check the inventory table – quantityInStock decreases by the sales amount. Views like Stock Control show updated expected stock without manual refresh.

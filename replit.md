@@ -6,6 +6,16 @@ Dulce ERP is a comprehensive bakery management system designed for efficient man
 
 ## Recent Changes
 
+**December 1, 2025 - Stock Control Improvements & Auto Sales Deduction**
+- Updated Stock Control module to display "Inventory Stock" instead of "Delivered" column
+- Changed Expected Stock formula to: Inventory Stock - sales - waste (uses store's inventory as baseline)
+- Added auto-deduction of sales from store inventory when sales data is entered
+- Sales validation checks inventory as-of the sale date, preventing overselling
+- Success toast now confirms "Inventory has been updated automatically"
+- Added `getInventoryAsOfDate` method for historical inventory lookups
+- Removed product code column from Products table display
+- Note: For backdated sales, subsequent inventory entries are not automatically recalculated
+
 **November 26, 2025 - Needs List Multi-Item Support & Form Fixes**
 - Added `items` column (JSON text array) to `needs_requests` table for multi-item support per request
 - Migrated existing single-item records to new array format (itemId, itemName, quantity preserved in legacy columns)
@@ -67,9 +77,9 @@ Preferred communication style: Simple, everyday language.
 - **Product Costing:** Simplified model with `batchYield` for accurate unit cost calculation.
 - **User Management:** Admin-only CRUD with store assignments.
 - **Two-Stage Stock Entry:** Staff enters current stock/waste; Admin/Manager enters sales and delivery data.
-- **Sales Data Entry Module:** Form-based daily sales entry, updates stock entries.
+- **Sales Data Entry Module:** Form-based daily sales entry, automatically deducts from store inventory, validates against available stock as-of sale date, and shows success confirmation.
 - **Delivery Module:** Form-based delivery entry, saves to `deliveries` table, automatically deducts from production center inventory AND adds to target store inventory, with validation for insufficient inventory.
-- **Stock Control Module:** Comprehensive table view of all stock entries with delivered, current stock, waste, sales, expected remaining, and discrepancy %. Features filters, summary statistics, and color-coded discrepancy badges.
+- **Stock Control Module:** Comprehensive table view of all stock entries with inventory stock, current stock, waste, sales, expected remaining (Inventory Stock - sales - waste), and discrepancy %. Features filters, summary statistics, and color-coded discrepancy badges.
 - **Remaining Stock Dashboard:** Real-time stock level monitoring across stores, displaying latest stock entry per product, low stock alerts, and grouped by store.
 - **Inventory Module:** Store-specific inventory management with store selector dropdown (Admin/Manager only), production entry at Delahey production center, summary cards (total items, products, value), and auto-deduction/addition for deliveries between production center and stores.
 - **Waste Management System:** `maxWastePercent` field in Product model, real-time waste percentage calculation, visual warnings, and color-coded validation.

@@ -87,9 +87,14 @@ export default function SalesDataEntry() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory/current"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/discrepancies"] });
-      toast({ title: "Sales data saved successfully" });
+      toast({ 
+        title: "Sales data saved successfully",
+        description: "Inventory has been updated automatically"
+      });
       setSalesQuantities({});
       setSelectedStore("");
       setIsModalOpen(false);
