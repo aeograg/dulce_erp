@@ -76,7 +76,6 @@ export default function Products() {
   );
 
   const columns = [
-    { key: "code", label: "Code", sortable: true },
     { key: "name", label: "Product Name", sortable: true },
     {
       key: "batchYield",

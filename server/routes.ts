@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const entry = await storage.createStockEntry({
         ...entryData,
         delivered: inventoryStock,
-        expectedStock: String(expectedStock),
+        expectedStock: expectedStock,
         reportedRemaining: entryData.reportedStock,
         discrepancy,
       }, (req.session as any).username);
@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       const updatedEntry = await storage.updateStockEntry(req.params.id, {
         delivered: inventoryStock,
-        expectedStock: String(expectedStock),
+        expectedStock: expectedStock,
         discrepancy,
       });
       
