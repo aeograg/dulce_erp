@@ -352,15 +352,15 @@ export default function Deliveries() {
     const recentDeliveries = deliveries.slice(0, 10);
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6 px-2 md:px-0">
         <div>
-          <h1 className="text-2xl font-semibold">Delivery Module</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold">Delivery Module</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             Record delivery quantities for stores
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>New Delivery Entry</CardTitle>
@@ -407,8 +407,9 @@ export default function Deliveries() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Product Quantities</Label>
-                  <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
+                  <Label className="text-sm md:text-base">Product Quantities</Label>
+                  <p className="text-xs text-muted-foreground">Stock from Delahey production center</p>
+                  <div className="border rounded-md p-2 md:p-4 space-y-2 md:space-y-3 max-h-80 md:max-h-96 overflow-y-auto">
                     {productsLoading || inventoryLoading ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="w-6 h-6 animate-spin" />
@@ -418,11 +419,11 @@ export default function Deliveries() {
                         No products available
                       </p>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
+                      <div className="space-y-2 md:space-y-3">
+                        <div className="grid grid-cols-[1.5fr_1fr_1fr] md:grid-cols-[2fr_1fr_1fr] gap-2 md:gap-4 pb-2 border-b font-medium text-xs md:text-sm">
                           <div>Product</div>
-                          <div className="text-center">Available Stock</div>
-                          <div className="text-center">Quantity to Send</div>
+                          <div className="text-center">Stock</div>
+                          <div className="text-center">Send</div>
                         </div>
                         {products.map((product) => {
                           const availableStock = currentInventory[product.id] || 0;
@@ -430,11 +431,11 @@ export default function Deliveries() {
                           const exceedsStock = requestedQty > availableStock;
                           
                           return (
-                            <div key={product.id} className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center">
-                              <Label className="text-sm" htmlFor={`qty-${product.id}`}>
+                            <div key={product.id} className="grid grid-cols-[1.5fr_1fr_1fr] md:grid-cols-[2fr_1fr_1fr] gap-2 md:gap-4 items-center">
+                              <Label className="text-xs md:text-sm truncate" htmlFor={`qty-${product.id}`} title={product.name}>
                                 {product.name}
                               </Label>
-                              <div className={`text-center font-semibold ${availableStock === 0 ? 'text-destructive' : 'text-foreground'}`} data-testid={`available-stock-${product.id}`}>
+                              <div className={`text-center text-sm md:text-base font-semibold ${availableStock === 0 ? 'text-destructive' : 'text-foreground'}`} data-testid={`available-stock-${product.id}`}>
                                 {availableStock}
                               </div>
                               <Input
@@ -445,7 +446,7 @@ export default function Deliveries() {
                                 value={productQuantities[product.id] || ""}
                                 onChange={(e) => handleQuantityChange(product.id, e.target.value)}
                                 placeholder="0"
-                                className={`w-full ${exceedsStock ? 'border-destructive' : ''}`}
+                                className={`w-full text-sm ${exceedsStock ? 'border-destructive' : ''}`}
                                 data-testid={`input-quantity-${product.id}`}
                               />
                             </div>
@@ -475,7 +476,7 @@ export default function Deliveries() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Delivery Templates</CardTitle>
@@ -543,9 +544,9 @@ export default function Deliveries() {
                   )}
 
                   <Dialog open={executeModalOpen} onOpenChange={setExecuteModalOpen}>
-                    <DialogContent className="max-w-xl">
+                    <DialogContent className="max-w-[95vw] md:max-w-xl max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Execute Delivery Template</DialogTitle>
+                        <DialogTitle className="text-lg md:text-xl">Execute Delivery Template</DialogTitle>
                         <DialogDescription>
                           Review and edit quantities before executing
                         </DialogDescription>
@@ -564,12 +565,12 @@ export default function Deliveries() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Product Quantities</Label>
-                          <div className="border rounded-md p-4 space-y-3 max-h-64 overflow-y-auto">
-                            <div className="grid grid-cols-[2fr_1fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
+                          <Label className="text-sm md:text-base">Product Quantities</Label>
+                          <div className="border rounded-md p-2 md:p-4 space-y-2 md:space-y-3 max-h-52 md:max-h-64 overflow-y-auto">
+                            <div className="grid grid-cols-[1.5fr_1fr_1fr] md:grid-cols-[2fr_1fr_1fr] gap-2 md:gap-4 pb-2 border-b font-medium text-xs md:text-sm">
                               <div>Product</div>
-                              <div className="text-center">Available</div>
-                              <div className="text-center">Quantity</div>
+                              <div className="text-center">Stock</div>
+                              <div className="text-center">Qty</div>
                             </div>
                             {Object.entries(executeQuantities).map(([productId, quantity]) => {
                               const product = products.find(p => p.id === productId);
@@ -577,8 +578,8 @@ export default function Deliveries() {
                               const exceedsStock = quantity > availableStock;
                               
                               return (
-                                <div key={productId} className="grid grid-cols-[2fr_1fr_1fr] gap-4 items-center">
-                                  <Label className="text-sm">{product?.name || "Unknown"}</Label>
+                                <div key={productId} className="grid grid-cols-[1.5fr_1fr_1fr] md:grid-cols-[2fr_1fr_1fr] gap-2 md:gap-4 items-center">
+                                  <Label className="text-xs md:text-sm truncate" title={product?.name || "Unknown"}>{product?.name || "Unknown"}</Label>
                                   <div className={`text-center text-sm font-semibold ${availableStock === 0 ? 'text-destructive' : 'text-foreground'}`}>
                                     {availableStock}
                                   </div>
@@ -588,7 +589,7 @@ export default function Deliveries() {
                                     value={quantity}
                                     onChange={(e) => handleExecuteQuantityChange(productId, e.target.value)}
                                     placeholder="0"
-                                    className={`w-full ${exceedsStock ? 'border-destructive' : ''}`}
+                                    className={`w-full text-sm ${exceedsStock ? 'border-destructive' : ''}`}
                                     data-testid={`input-execute-quantity-${productId}`}
                                   />
                                 </div>
@@ -633,7 +634,7 @@ export default function Deliveries() {
                       + Create Template
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Create Delivery Template</DialogTitle>
                       <DialogDescription>
@@ -674,14 +675,14 @@ export default function Deliveries() {
 
                       {templateStore && (
                         <div className="space-y-2">
-                          <Label>Product Quantities</Label>
+                          <Label className="text-sm md:text-base">Product Quantities</Label>
                           <p className="text-xs text-muted-foreground">
                             Set default quantities for products in this template
                           </p>
-                          <div className="border rounded-md p-4 space-y-3 max-h-96 overflow-y-auto">
-                            <div className="grid grid-cols-[2fr_1fr] gap-4 pb-2 border-b font-medium text-sm">
+                          <div className="border rounded-md p-2 md:p-4 space-y-2 md:space-y-3 max-h-64 md:max-h-96 overflow-y-auto">
+                            <div className="grid grid-cols-[1.5fr_1fr] md:grid-cols-[2fr_1fr] gap-2 md:gap-4 pb-2 border-b font-medium text-xs md:text-sm">
                               <div>Product</div>
-                              <div className="text-center">Default Quantity</div>
+                              <div className="text-center">Qty</div>
                             </div>
                             {productsLoading ? (
                               <div className="flex items-center justify-center py-4">
@@ -694,8 +695,8 @@ export default function Deliveries() {
                             ) : (
                               <>
                                 {products.map((product) => (
-                                  <div key={product.id} className="grid grid-cols-[2fr_1fr] gap-4 items-center">
-                                    <Label className="text-sm" htmlFor={`tpl-qty-${product.id}`}>
+                                  <div key={product.id} className="grid grid-cols-[1.5fr_1fr] md:grid-cols-[2fr_1fr] gap-2 md:gap-4 items-center">
+                                    <Label className="text-xs md:text-sm truncate" htmlFor={`tpl-qty-${product.id}`} title={product.name}>
                                       {product.name}
                                     </Label>
                                     <Input
@@ -705,6 +706,7 @@ export default function Deliveries() {
                                       value={templateQuantities[product.id] || ""}
                                       onChange={(e) => handleTemplateQuantityChange(product.id, e.target.value)}
                                       placeholder="0"
+                                      className="text-sm"
                                       data-testid={`input-template-quantity-${product.id}`}
                                     />
                                   </div>

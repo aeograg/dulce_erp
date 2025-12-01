@@ -214,20 +214,20 @@ export default function NeedsList() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 px-2 md:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Needs List</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold">Needs List</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             Request products or raw materials for your store
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => handleOpenDialog("product")} data-testid="button-request-products">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button onClick={() => handleOpenDialog("product")} className="w-full sm:w-auto" data-testid="button-request-products">
             <Package className="w-4 h-4 mr-2" />
             Request Products
           </Button>
-          <Button onClick={() => handleOpenDialog("raw")} variant="outline" data-testid="button-request-raw">
+          <Button onClick={() => handleOpenDialog("raw")} variant="outline" className="w-full sm:w-auto" data-testid="button-request-raw">
             <Leaf className="w-4 h-4 mr-2" />
             Request Raw Materials
           </Button>
@@ -241,7 +241,62 @@ export default function NeedsList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="space-y-3 md:hidden">
+          {requests.map((request) => {
+            const requestItems = JSON.parse(request.items || "[]");
+            return (
+              <Card key={request.id} data-testid={`card-request-${request.id}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {request.requestType === "product" ? (
+                        <Package className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <Leaf className="w-4 h-4 text-green-500" />
+                      )}
+                      <span className="text-sm font-medium">{request.requestType === "product" ? "Product" : "Material"}</span>
+                    </div>
+                    {getStatusBadge(request.status)}
+                  </div>
+                  <div className="space-y-1 mb-2">
+                    {requestItems.map((item: any, idx: number) => (
+                      <div key={idx} className="text-sm">
+                        {item.itemName} - <span className="font-semibold">{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {getStoreName(request.storeId)} • {request.createdBy || "Unknown"} • {new Date(request.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {user?.role !== "Staff" && request.status === "pending" && (
+                      <>
+                        <Button size="sm" variant="outline" className="text-green-600" onClick={() => updateStatusMutation.mutate({ id: request.id, status: "approved" })} data-testid={`button-approve-${request.id}`}>
+                          <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => updateStatusMutation.mutate({ id: request.id, status: "rejected" })} data-testid={`button-reject-${request.id}`}>
+                          <XCircle className="w-3 h-3 mr-1" /> Reject
+                        </Button>
+                      </>
+                    )}
+                    {user?.role !== "Staff" && request.status === "approved" && (
+                      <Button size="sm" variant="outline" className="text-blue-600" onClick={() => updateStatusMutation.mutate({ id: request.id, status: "completed" })} data-testid={`button-complete-${request.id}`}>
+                        <CheckCircle className="w-3 h-3 mr-1" /> Complete
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteRequestMutation.mutate(request.id)} data-testid={`button-delete-${request.id}`}>
+                      <Trash className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+      
+      {requests.length > 0 && (
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b">

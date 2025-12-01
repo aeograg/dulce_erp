@@ -277,17 +277,17 @@ export default function StockEntry() {
   const isLoading = storesLoading || productsLoading || stockEntriesLoading;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 px-2 md:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Stock Entry</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl md:text-2xl font-semibold">Stock Entry</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1">
             {user?.role === "Staff" 
               ? "Record end-of-day stock levels and waste for your store"
               : "Record daily stock levels and track discrepancies"}
           </p>
         </div>
-        <Button onClick={handleAddNew} data-testid="button-add-stock-entry">
+        <Button onClick={handleAddNew} data-testid="button-add-stock-entry" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Stock Entry
         </Button>
@@ -333,7 +333,7 @@ export default function StockEntry() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-3 md:gap-4 grid-cols-2 md:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="filter-store">Store</Label>
               <Select value={filterStore} onValueChange={setFilterStore}>

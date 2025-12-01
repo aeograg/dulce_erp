@@ -192,20 +192,20 @@ export default function Inventory() {
   const totalItems = sortedInventory.reduce((sum, item) => sum + item.stock, 0);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-4 md:space-y-6 p-2 md:p-6">
+      <div className="flex flex-col gap-3 md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Inventory Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">Inventory Management</h1>
+          <p className="text-xs md:text-base text-muted-foreground mt-1 md:mt-2">
             {isProductionCenter ? "Manage production center inventory and production" : `View ${selectedStoreName} inventory`}
           </p>
         </div>
         
         {isAdminOrManager && (
           <div className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-muted-foreground" />
+            <Store className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
             <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
-              <SelectTrigger className="w-[200px]" data-testid="select-store-filter">
+              <SelectTrigger className="w-full md:w-[200px]" data-testid="select-store-filter">
                 <SelectValue placeholder="Select store" />
               </SelectTrigger>
               <SelectContent>
