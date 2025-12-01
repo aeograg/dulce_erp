@@ -66,8 +66,23 @@ export default function Deliveries() {
     queryKey: ["/api/deliveries"],
   });
 
+  // Get production center store ID (Delahey)
+  const { data: productionStoreData } = useQuery<{ storeId: string }>({
+    queryKey: ["/api/inventory/production-store"],
+  });
+
+  const productionStoreId = productionStoreData?.storeId;
+
+  // Fetch inventory specifically from production center (Delahey)
   const { data: currentInventory = {}, isLoading: inventoryLoading } = useQuery<Record<string, number>>({
-    queryKey: ["/api/inventory/current"],
+    queryKey: ["/api/inventory/current", { storeId: productionStoreId }],
+    queryFn: async () => {
+      if (!productionStoreId) return {};
+      const response = await fetch(`/api/inventory/current?storeId=${productionStoreId}`);
+      if (!response.ok) throw new Error('Failed to fetch inventory');
+      return response.json();
+    },
+    enabled: !!productionStoreId,
   });
 
   const { data: allTemplates = [] } = useQuery<any[]>({
@@ -113,6 +128,10 @@ export default function Deliveries() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deliveries"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey[0] === "/api/inventory/current" || 
+        query.queryKey[0] === "/api/inventory"
+      });
       toast({ title: "Deliveries saved successfully" });
       setProductQuantities({});
       setSelectedStore("");
@@ -152,6 +171,10 @@ export default function Deliveries() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deliveries"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey[0] === "/api/inventory/current" || 
+        query.queryKey[0] === "/api/inventory"
+      });
       toast({ title: "Delivery executed successfully" });
       setExecuteModalOpen(false);
       setExecuteTemplateId("");
