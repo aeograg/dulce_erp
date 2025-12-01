@@ -250,10 +250,14 @@ export default function SalesDataEntry() {
                     id="sales-date"
                     type="date"
                     value={selectedDate}
+                    max={today}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     required
                     data-testid="input-sales-date"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Sales can only be entered for today or earlier dates
+                  </p>
                 </div>
 
                 <div className="space-y-2">
